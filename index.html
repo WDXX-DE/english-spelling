@@ -1,0 +1,2526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wdx.Eenglish-spelling | 英文拼写练习</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #7c3aed;
+      --primary-light: #a855f7;
+      --accent: #06b6d4;
+      --success: #10b981;
+      --error: #ef4444;
+      --warning: #f59e0b;
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --text-primary: #f1f5f9;
+      --text-secondary: rgba(241, 245, 249, 0.7);
+      --card-radius: 24px;
+      --transition: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      overflow-y: auto;
+    }
+
+    body { background: #0f0c29; position: relative; }
+
+    #bgCanvas { position: fixed; inset: 0; z-index: 0; }
+
+    .orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(80px); opacity: 0.35;
+      pointer-events: none; z-index: 0;
+      animation: orbFloat 12s ease-in-out infinite alternate;
+    }
+    .orb-1 { width:600px;height:600px;background:radial-gradient(circle,#7c3aed,transparent);top:-200px;left:-100px;animation-duration:10s; }
+    .orb-2 { width:500px;height:500px;background:radial-gradient(circle,#06b6d4,transparent);bottom:-150px;right:-100px;animation-duration:14s;animation-delay:-4s; }
+    .orb-3 { width:400px;height:400px;background:radial-gradient(circle,#ec4899,transparent);top:40%;left:50%;transform:translate(-50%,-50%);animation-duration:8s;animation-delay:-2s; }
+
+    @keyframes orbFloat {
+      0%   { transform: translate(0,0) scale(1); }
+      50%  { transform: translate(30px,-40px) scale(1.05); }
+      100% { transform: translate(-20px,20px) scale(0.95); }
+    }
+
+    /* ===== Scrollable wrapper ===== */
+    .app-wrapper {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .card {
+      width: 100%; max-width: 700px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(40px) saturate(180%);
+      -webkit-backdrop-filter: blur(40px) saturate(180%);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--card-radius);
+      padding: 40px 52px;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.05) inset,0 32px 64px rgba(0,0,0,0.4),0 0 100px rgba(124,58,237,0.15);
+      margin: auto 0;
+    }
+
+    /* ===== Daily Check-in Banner ===== */
+    .checkin-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(16,185,129,0.1));
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 14px; padding: 12px 18px;
+      margin-bottom: 24px; gap: 12px;
+      cursor: pointer; transition: all 0.3s ease;
+      position: relative; overflow: hidden;
+    }
+    .checkin-banner::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(245,158,11,0.08), transparent);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .checkin-banner:hover::before { opacity: 1; }
+    .checkin-banner:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(245,158,11,0.15); }
+
+    .checkin-left { display: flex; align-items: center; gap: 10px; }
+    .checkin-fire { font-size: 22px; line-height: 1; }
+    .checkin-info { display: flex; flex-direction: column; gap: 2px; }
+    .checkin-title { font-size: 13px; font-weight: 700; color: #fbbf24; letter-spacing: 0.3px; }
+    .checkin-sub   { font-size: 11px; color: var(--text-secondary); }
+
+    .checkin-right { display: flex; align-items: center; gap: 8px; }
+
+    .streak-dots { display: flex; gap: 4px; }
+    .streak-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.15);
+      transition: all 0.3s ease;
+    }
+    .streak-dot.active { background: #f59e0b; border-color: #fbbf24; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+    .streak-dot.today  { background: #10b981; border-color: #34d399; box-shadow: 0 0 8px rgba(16,185,129,0.6); animation: dotPulse 1.5s ease-in-out infinite; }
+
+    @keyframes dotPulse {
+      0%,100% { box-shadow: 0 0 8px rgba(16,185,129,0.6); }
+      50%      { box-shadow: 0 0 16px rgba(16,185,129,0.9); }
+    }
+
+    .checkin-btn {
+      padding: 6px 14px; border-radius: 20px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border: none; color: white; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.3s ease; white-space: nowrap;
+    }
+    .checkin-btn:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(245,158,11,0.4); }
+    .checkin-btn.done {
+      background: linear-gradient(135deg, #10b981, #059669);
+      cursor: default; transform: none; box-shadow: none;
+    }
+    .checkin-btn.done:hover { transform: none; box-shadow: none; }
+
+    /* ===== Header ===== */
+    .header { text-align: center; margin-bottom: 28px; }
+
+    .logo-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 60px; height: 60px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: 16px; margin-bottom: 12px;
+      box-shadow: 0 8px 24px rgba(124,58,237,0.4);
+      font-size: 26px;
+      animation: iconPulse 3s ease-in-out infinite;
+    }
+    @keyframes iconPulse {
+      0%,100% { transform: scale(1); box-shadow: 0 8px 24px rgba(124,58,237,0.4); }
+      50%      { transform: scale(1.05); box-shadow: 0 12px 32px rgba(124,58,237,0.6); }
+    }
+
+    .title {
+      font-size: 26px; font-weight: 700;
+      background: linear-gradient(135deg, #f1f5f9, var(--primary-light));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      letter-spacing: -0.5px; margin-bottom: 4px;
+    }
+    .subtitle { color: var(--text-secondary); font-size: 13px; letter-spacing: 0.3px; }
+
+    /* ===== Progress ===== */
+    .progress-section { margin-bottom: 24px; }
+    .progress-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .progress-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+    .progress-count { font-size: 13px; color: var(--primary-light); font-weight: 700; font-variant-numeric: tabular-nums; }
+    .progress-track { height: 6px; background: rgba(255,255,255,0.1); border-radius: 100px; overflow: hidden; }
+    .progress-fill  { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 100px; transition: width 0.6s var(--transition); box-shadow: 0 0 10px rgba(124,58,237,0.5); }
+
+    /* ===== Wrong queue badge ===== */
+    .wrong-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 20px; padding: 3px 10px;
+      font-size: 11px; font-weight: 600; color: #fca5a5;
+      letter-spacing: 0.4px; margin-left: 8px;
+      transition: all 0.3s ease;
+    }
+    .wrong-badge.hidden { opacity: 0; pointer-events: none; }
+
+    /* ===== Question Area ===== */
+    .question-area {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px; padding: 24px; margin-bottom: 20px;
+      position: relative; overflow: hidden;
+    }
+    .question-area::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    }
+
+    .question-tag-row { display: flex; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 6px; }
+
+    .question-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; font-weight: 600; color: var(--primary-light);
+      text-transform: uppercase; letter-spacing: 0.8px;
+    }
+
+    .retry-tag {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; font-weight: 600; color: #fca5a5;
+      letter-spacing: 0.6px; animation: fadeInScale 0.4s var(--transition);
+    }
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.8); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .chinese-sentence { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1.5; margin-bottom: 6px; }
+    .hint-text { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+
+    /* ===== Word-by-Word Input Mode ===== */
+    .word-inputs-container {
+      display: none; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 16px; padding: 12px;
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+    }
+    .word-input-group {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .word-underscore {
+      font-size: 11px; color: var(--text-secondary);
+      letter-spacing: 1px; font-family: monospace;
+    }
+    .word-input {
+      width: 80px; text-align: center;
+      background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.15);
+      border-radius: 8px; padding: 10px 8px;
+      font-size: 15px; font-weight: 600; color: var(--text-primary);
+      letter-spacing: 0.5px; outline: none; transition: all 0.3s ease;
+      caret-color: var(--primary-light); text-transform: lowercase;
+    }
+    .word-input::placeholder { color: rgba(255,255,255,0.15); font-weight: 400; }
+    .word-input:focus { border-color: var(--primary); background: rgba(124,58,237,0.1); box-shadow: 0 0 0 3px rgba(124,58,237,0.2); }
+    .word-input.correct { border-color: var(--success); background: rgba(16,185,129,0.15); box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
+    .word-input.wrong   { border-color: var(--error); background: rgba(239,68,68,0.15); box-shadow: 0 0 0 3px rgba(239,68,68,0.2); animation: shake 0.5s var(--transition); }
+    .word-index {
+      font-size: 10px; color: rgba(255,255,255,0.3);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+
+    /* ===== Single Input (legacy) ===== */
+    .input-wrapper { position: relative; margin-bottom: 16px; }
+    .input-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+
+    .spelling-input {
+      width: 100%;
+      background: rgba(255,255,255,0.06); border: 2px solid rgba(255,255,255,0.12);
+      border-radius: 14px; padding: 16px 52px 16px 20px;
+      font-size: 17px; font-weight: 500; color: var(--text-primary);
+      letter-spacing: 0.5px; outline: none; transition: all 0.3s ease;
+      caret-color: var(--primary-light);
+    }
+    .spelling-input::placeholder { color: rgba(255,255,255,0.2); font-weight: 400; }
+    .spelling-input:focus { border-color: var(--primary); background: rgba(124,58,237,0.08); box-shadow: 0 0 0 4px rgba(124,58,237,0.15),0 0 20px rgba(124,58,237,0.1); }
+    .spelling-input.correct { border-color: var(--success); background: rgba(16,185,129,0.08); box-shadow: 0 0 0 4px rgba(16,185,129,0.15),0 0 20px rgba(16,185,129,0.1); }
+    .spelling-input.wrong   { border-color: var(--error); background: rgba(239,68,68,0.08); box-shadow: 0 0 0 4px rgba(239,68,68,0.15),0 0 20px rgba(239,68,68,0.1); animation: shake 0.5s var(--transition); }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      15% { transform: translateX(-10px); }
+      30% { transform: translateX(10px); }
+      45% { transform: translateX(-8px); }
+      60% { transform: translateX(8px); }
+      75% { transform: translateX(-4px); }
+      90% { transform: translateX(4px); }
+    }
+
+    .input-icon {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: all 0.3s ease; opacity: 0;
+    }
+    .input-icon.visible { opacity: 1; }
+    .input-icon.success-icon { background: rgba(16,185,129,0.2); color: #10b981; }
+    .input-icon.error-icon   { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    /* ===== Feedback ===== */
+    .feedback {
+      min-height: 44px; display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 12px;
+      font-size: 14px; font-weight: 500; margin-bottom: 16px;
+      opacity: 0; transform: translateY(-8px); transition: all 0.35s var(--transition);
+    }
+    .feedback.show { opacity: 1; transform: translateY(0); }
+    .feedback.success { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+    .feedback.error   { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; }
+    .feedback-emoji { font-size: 18px; line-height: 1; }
+
+    /* ===== Buttons ===== */
+    .btn-row { display: flex; gap: 10px; margin-bottom: 0; }
+
+    .btn-submit {
+      flex: 1; padding: 15px 20px;
+      background: linear-gradient(135deg, var(--primary), #6d28d9);
+      border: none; border-radius: 14px;
+      font-size: 15px; font-weight: 700; color: white;
+      cursor: pointer; letter-spacing: 0.3px;
+      transition: all 0.3s var(--transition);
+      position: relative; overflow: hidden;
+      box-shadow: 0 4px 16px rgba(124,58,237,0.4);
+    }
+    .btn-submit::before {
+      content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transition: left 0.5s ease;
+    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,0.55); }
+    .btn-submit:hover::before { left: 100%; }
+    .btn-submit:active { transform: translateY(0); box-shadow: 0 2px 10px rgba(124,58,237,0.3); }
+
+    /* Eye (查看答案) button */
+    .btn-eye {
+      flex: 0 0 auto; width: 52px; height: 52px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.3s var(--transition);
+      position: relative; overflow: hidden;
+      color: var(--text-secondary);
+    }
+    .btn-eye svg { width: 22px; height: 22px; stroke: currentColor; transition: stroke 0.3s ease; }
+    .btn-eye:hover {
+      color: #fbbf24; border-color: rgba(245,158,11,0.45);
+      transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,0.2);
+      background: rgba(245,158,11,0.08);
+    }
+    .btn-eye:active { transform: translateY(0); }
+    .btn-eye.revealed {
+      color: #fbbf24; border-color: rgba(245,158,11,0.5);
+      background: rgba(245,158,11,0.1); cursor: default;
+      box-shadow: 0 0 20px rgba(245,158,11,0.15);
+    }
+    .btn-eye.revealed:hover { transform: none; }
+
+    /* Eye icon SVG strikethrough line (for "revealed" state) */
+    .eye-slash { display: none; }
+    .btn-eye.revealed .eye-slash { display: block; }
+    .btn-eye.revealed .eye-open  { display: none; }
+
+    /* Tooltip */
+    .btn-eye::after {
+      content: '查看答案';
+      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: #f1f5f9;
+      font-size: 11px; font-weight: 600; white-space: nowrap;
+      padding: 4px 10px; border-radius: 6px; pointer-events: none;
+      opacity: 0; transition: opacity 0.2s ease;
+    }
+    .btn-eye:hover::after { opacity: 1; }
+    .btn-eye.revealed::after { content: '已查看'; }
+
+    /* Answer banner */
+    .answer-banner {
+      display: none; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 12px;
+      font-size: 14px; font-weight: 500; margin-bottom: 16px;
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      color: #fde68a; animation: bannerSlide 0.4s var(--transition);
+    }
+    .answer-banner.show { display: flex; }
+    @keyframes bannerSlide {
+      from { opacity: 0; transform: translateY(-10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .answer-banner .answer-text {
+      font-family: 'Courier New', monospace; font-weight: 700; font-size: 14px;
+      color: #fbbf24; background: rgba(0,0,0,0.2);
+      padding: 2px 10px; border-radius: 6px; letter-spacing: 0.5px;
+    }
+
+    /* ===== Letter Tiles ===== */
+    .answer-reveal { display: none; flex-wrap: wrap; gap: 5px; margin-bottom: 16px; }
+    .answer-reveal.show { display: flex; }
+    .letter-tile {
+      width: 34px; height: 38px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 7px; display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 600; color: var(--text-primary);
+      animation: tileReveal 0.4s var(--transition) both;
+    }
+    @keyframes tileReveal {
+      from { opacity: 0; transform: scale(0.5) rotateY(90deg); }
+      to   { opacity: 1; transform: scale(1) rotateY(0deg); }
+    }
+    .space-tile { width: 14px; height: 38px; }
+
+    /* ===== Stats ===== */
+    .stats-row {
+      display: flex; gap: 10px;
+      margin-top: 24px; padding-top: 20px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .stat-item {
+      flex: 1; text-align: center;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 10px 6px;
+    }
+    .stat-value {
+      font-size: 20px; font-weight: 800;
+      background: linear-gradient(135deg, #f1f5f9, var(--primary-light));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      line-height: 1; margin-bottom: 3px;
+    }
+    .stat-label { font-size: 10px; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.6px; }
+
+    /* ===== Completion Screen ===== */
+    .completion-screen { display: none; text-align: center; padding: 20px 0; }
+    .completion-screen.show { display: block; }
+    .game-card.hide { display: none; }
+
+    .trophy-icon { font-size: 68px; display: block; margin-bottom: 14px; animation: trophyBounce 0.8s var(--transition); }
+    @keyframes trophyBounce {
+      0%   { transform: scale(0) rotate(-15deg); }
+      60%  { transform: scale(1.15) rotate(5deg); }
+      80%  { transform: scale(0.95) rotate(-2deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    .completion-title {
+      font-size: 28px; font-weight: 800;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 8px;
+    }
+    .completion-sub { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
+
+    /* Checkin complete card */
+    .checkin-complete-card {
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(245,158,11,0.1));
+      border: 1px solid rgba(16,185,129,0.25);
+      border-radius: 16px; padding: 16px 20px;
+      margin-bottom: 24px; display: flex; align-items: center; gap: 14px;
+      animation: fadeInScale 0.5s var(--transition);
+    }
+    .checkin-complete-icon { font-size: 36px; line-height: 1; }
+    .checkin-complete-info { text-align: left; }
+    .checkin-complete-title { font-size: 15px; font-weight: 700; color: #34d399; margin-bottom: 2px; }
+    .checkin-complete-sub   { font-size: 12px; color: var(--text-secondary); }
+
+    .final-stats { display: flex; justify-content: center; gap: 24px; margin-bottom: 28px; }
+    .final-stat { text-align: center; }
+    .final-stat-value { font-size: 34px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .final-stat-value.gold  { color: #fbbf24; }
+    .final-stat-value.green { color: #10b981; }
+    .final-stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.6px; }
+
+    .btn-restart {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 13px 32px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border: none; border-radius: 14px;
+      font-size: 14px; font-weight: 700; color: white;
+      cursor: pointer; letter-spacing: 0.3px;
+      transition: all 0.3s var(--transition);
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
+    }
+    .btn-restart:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 8px 30px rgba(124,58,237,0.55); }
+
+    /* ===== Confetti ===== */
+    .confetti-piece {
+      position: fixed; width: 10px; height: 10px; border-radius: 2px;
+      pointer-events: none; z-index: 999;
+      animation: confettiFall linear forwards;
+    }
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 600px) {
+      .card { padding: 28px 20px; }
+      .title { font-size: 20px; }
+      .chinese-sentence { font-size: 18px; }
+      .stats-row { gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+<canvas id="bgCanvas"></canvas>
+
+<div class="app-wrapper">
+  <div class="card">
+
+    <!-- 每日打卡横幅 -->
+    <div class="checkin-banner" id="checkinBanner" onclick="doCheckin()">
+      <div class="checkin-left">
+        <span class="checkin-fire">🔥</span>
+        <div class="checkin-info">
+          <div class="checkin-title" id="checkinTitle">每日打卡</div>
+          <div class="checkin-sub" id="checkinSub">完成今日练习即可打卡</div>
+        </div>
+      </div>
+      <div class="checkin-right">
+        <div class="streak-dots" id="streakDots"></div>
+        <button class="checkin-btn" id="checkinBtn">立即打卡</button>
+      </div>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-icon">✏️</div>
+      <h1 class="title">英文拼写练习</h1>
+      <p class="subtitle">English Spelling Practice · 看中文，写英文</p>
+    </div>
+
+    <!-- Game Card -->
+    <div id="gameCard" class="game-card">
+
+      <!-- Progress -->
+      <div class="progress-section">
+        <div class="progress-meta">
+          <div style="display:flex;align-items:center;">
+            <span class="progress-label">练习进度</span>
+            <span class="wrong-badge hidden" id="wrongBadge">❌ 错题 <span id="wrongQueueCount">0</span></span>
+          </div>
+          <span class="progress-count" id="progressCount">1 / 10</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Question -->
+      <div class="question-area">
+        <div class="question-tag-row">
+          <div class="question-tag">📖 中文提示</div>
+          <div class="retry-tag" id="retryTag" style="display:none;">🔁 错题重练</div>
+        </div>
+        <div class="chinese-sentence" id="chineseSentence">加载中...</div>
+        <div class="hint-text" id="hintText"></div>
+      </div>
+
+      <!-- Answer tiles -->
+      <div class="answer-reveal" id="answerReveal"></div>
+
+      <!-- Word-by-Word Inputs -->
+      <div class="word-inputs-container" id="wordInputsContainer"></div>
+
+      <!-- Single Input (hidden in word mode) -->
+      <div class="input-wrapper" id="singleInputWrapper" style="display:none;">
+        <label class="input-label" for="spellingInput">请输入对应的英文</label>
+        <input
+          id="spellingInput"
+          class="spelling-input"
+          type="text"
+          placeholder="在此输入英文拼写..."
+          autocomplete="off" autocorrect="off" spellcheck="false"
+        />
+        <div class="input-icon" id="inputIcon"></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="feedback" id="feedback">
+        <span class="feedback-emoji" id="feedbackEmoji"></span>
+        <span id="feedbackText"></span>
+      </div>
+
+      <!-- Answer Banner -->
+      <div class="answer-banner" id="answerBanner">
+        <span>💡 正确答案：</span>
+        <span class="answer-text" id="answerBannerText"></span>
+      </div>
+
+      <!-- Buttons -->
+      <div class="btn-row">
+        <button class="btn-submit" id="submitBtn" onclick="handleSubmit()">✅ 确认提交</button>
+
+        <!-- 眼睛图标按钮 -->
+        <button class="btn-eye" id="eyeBtn" onclick="showAnswer()" aria-label="查看答案">
+          <!-- 睁眼 SVG -->
+          <svg class="eye-open" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <!-- 划掉眼 SVG（已查看状态） -->
+          <svg class="eye-slash" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-value" id="statCorrect">0</div>
+          <div class="stat-label">✅ 答对</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statWrong">0</div>
+          <div class="stat-label">❌ 答错</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="statStreak">0</div>
+          <div class="stat-label">🔥 连对</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Completion Screen -->
+    <div id="completionScreen" class="completion-screen">
+      <span class="trophy-icon">🏆</span>
+      <h2 class="completion-title">练习完成！</h2>
+
+      <!-- 打卡成功提示（完成后自动打卡） -->
+      <div class="checkin-complete-card" id="checkinCompleteCard">
+        <div class="checkin-complete-icon">📅</div>
+        <div class="checkin-complete-info">
+          <div class="checkin-complete-title" id="checkinCompleteTitle">今日打卡成功！</div>
+          <div class="checkin-complete-sub" id="checkinCompleteSub">连续打卡 1 天，继续保持！</div>
+        </div>
+      </div>
+
+      <p class="completion-sub" id="completionSub">太棒了，你完成了本轮练习！</p>
+      <div class="final-stats">
+        <div class="final-stat">
+          <div class="final-stat-value gold" id="finalTotal">0</div>
+          <div class="final-stat-label">总题数</div>
+        </div>
+        <div class="final-stat">
+          <div class="final-stat-value green" id="finalCorrect">0</div>
+          <div class="final-stat-label">答对次数</div>
+        </div>
+      </div>
+      <button class="btn-restart" onclick="restartGame()">🔄 重新开始</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   题库 — 105组（覆盖问候、购物、用餐、旅行、工作、观点、紧急等场景）
+============================================================ */
+/* ============================================================
+   题库 — 514组（22大场景，英文地道准确）
+============================================================ */
+const ALL_QUESTIONS = [
+
+  // ═══════════════════════════════════════════════════════
+  // 1. 问候与介绍 (Greetings & Introductions) — 30句
+  // ═══════════════════════════════════════════════════════
+  { zh: "嗨，最近怎么样？",                  en: "Hey, how's it going?" },
+  { zh: "你好！最近怎么样？",                en: "Hi there! How have you been?" },
+  { zh: "早上好！你好吗？",                  en: "Good morning! How are you?" },
+  { zh: "下午好！",                          en: "Good afternoon!" },
+  { zh: "晚上好！",                          en: "Good evening!" },
+  { zh: "很高兴见到你。",                    en: "Nice to meet you." },
+  { zh: "见到你很高兴。",                    en: "Pleased to meet you." },
+  { zh: "再次见到你真好。",                  en: "It's great to see you again." },
+  { zh: "好久不见！",                        en: "Long time no see!" },
+  { zh: "你最近怎么样？",                    en: "How have you been lately?" },
+  { zh: "你好，很高兴认识你。",              en: "Hello, nice to meet you." },
+  { zh: "请问我能和您握手吗？",              en: "May I shake your hand?" },
+  { zh: "你叫什么名字？",                    en: "What's your name?" },
+  { zh: "请问您贵姓？",                      en: "May I ask your last name?" },
+  { zh: "您怎么称呼？",                      en: "What should I call you?" },
+  { zh: "你来自哪里？",                      en: "Where are you from?" },
+  { zh: "你是哪里人？",                      en: "Where are you originally from?" },
+  { zh: "你是做什么工作的？",                en: "What do you do for a living?" },
+  { zh: "你在哪家公司上班？",                en: "Which company do you work for?" },
+  { zh: "你做这行多久了？",                  en: "How long have you been doing this?" },
+  { zh: "你是什么专业的？",                  en: "What's your major?" },
+  { zh: "你多大了？",                        en: "How old are you?" },
+  { zh: "你结婚了吗？",                      en: "Are you married?" },
+  { zh: "你有孩子吗？",                      en: "Do you have any children?" },
+  { zh: "你住在这附近吗？",                  en: "Do you live around here?" },
+  { zh: "你吃了吗？",                        en: "Have you eaten yet?" },
+  { zh: "最近在忙什么？",                    en: "What have you been up to lately?" },
+  { zh: "有空常来坐坐！",                    en: "Drop by whenever you're free!" },
+  { zh: "代我向你的家人问好。",              en: "Give my best to your family." },
+  { zh: "保持联系！",                        en: "Stay in touch!" },
+
+  // ═══════════════════════════════════════════════════════
+  // 2. 闲聊与天气 (Small Talk & Weather) — 25句
+  // ═══════════════════════════════════════════════════════
+  { zh: "今天天气真好。",                    en: "The weather is really nice today." },
+  { zh: "今天天气很好。",                    en: "The weather is beautiful today." },
+  { zh: "外面阳光明媚。",                    en: "It's sunny outside." },
+  { zh: "今天风很大。",                      en: "It's really windy today." },
+  { zh: "天气凉爽宜人。",                    en: "The weather is cool and pleasant." },
+  { zh: "今天挺冷的。",                      en: "It's pretty cold today." },
+  { zh: "外面在下雨。",                      en: "It's raining outside." },
+  { zh: "看起来要下雨了。",                  en: "It looks like it's going to rain." },
+  { zh: "下雪了！",                          en: "It's snowing!" },
+  { zh: "今天雾很大。",                      en: "It's very foggy today." },
+  { zh: "湿度很高。",                        en: "The humidity is very high." },
+  { zh: "今天湿热难耐。",                    en: "It's really humid today." },
+  { zh: "今天过得怎么样？",                  en: "How's your day going?" },
+  { zh: "今天在忙什么？",                    en: "What are you busy with today?" },
+  { zh: "今天忙吗？",                        en: "Is it a busy day?" },
+  { zh: "你周末有什么计划吗？",              en: "Do you have any plans for the weekend?" },
+  { zh: "你周末过得怎么样？",                en: "How was your weekend?" },
+  { zh: "昨晚的比赛你看了吗？",              en: "Did you watch the game last night?" },
+  { zh: "这周过得好快啊。",                  en: "This week flew by." },
+  { zh: "你最近睡眠怎么样？",                en: "How's your sleep lately?" },
+  { zh: "我喜欢雨天的氛围。",                en: "I love the cozy vibe on rainy days." },
+  { zh: "夏天我喜欢去海边。",                en: "I love going to the beach in summer." },
+  { zh: "冬天我喜欢喝热可可。",              en: "I love drinking hot cocoa in winter." },
+  { zh: "春天百花盛开。",                    en: "Flowers bloom in spring." },
+  { zh: "秋天的落叶很美。",                  en: "Autumn leaves are beautiful." },
+
+  // ═══════════════════════════════════════════════════════
+  // 3. 咖啡与约会 (Coffee & Dating) — 18句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你周末想去喝杯咖啡吗？",            en: "Do you want to grab a coffee this weekend?" },
+  { zh: "听起来不错！我们在老地方见吧。",    en: "That sounds great! Let's meet at the usual place." },
+  { zh: "你什么时间方便？",                  en: "What time works for you?" },
+  { zh: "周六下午三点怎么样？",              en: "How about Saturday around 3 PM?" },
+  { zh: "好的，到时候见！",                  en: "Perfect! I'll see you then." },
+  { zh: "我们找个时间去那家新开的咖啡馆吧！", en: "Let's try that new cafe downtown sometime!" },
+  { zh: "好的，到时候见。",                  en: "Sounds good! I'll see you there." },
+  { zh: "我们找个时间聚一下吧！",            en: "We should plan a get-together soon!" },
+  { zh: "你想喝点什么？",                    en: "What would you like to drink?" },
+  { zh: "我要一杯美式咖啡。",                en: "I'll have an Americano, please." },
+  { zh: "我要一杯拿铁，少糖。",              en: "I'll have a latte with less sugar." },
+  { zh: "这家的卡布奇诺很好喝。",            en: "The cappuccino here is really good." },
+  { zh: "你想要加奶还是加糖？",              en: "Would you like cream or sugar?" },
+  { zh: "我们边喝边聊吧。",                  en: "Let's chat over coffee." },
+  { zh: "这是我爱喝的咖啡。",                en: "This is my favorite coffee." },
+  { zh: "我请客。",                          en: "It's on me." },
+  { zh: "我们AA吧。",                        en: "Let's split it." },
+  { zh: "谢谢你请我喝咖啡。",                en: "Thanks for the coffee." },
+
+  // ═══════════════════════════════════════════════════════
+  // 4. 礼貌请求与提议 (Polite Requests) — 30句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你能帮我一下吗？",                  en: "Could you please help me with this?" },
+  { zh: "你介意打开窗户吗？",                en: "Would you mind opening the window?" },
+  { zh: "你能把音量调低一点吗？",            en: "Could you turn the volume down a bit?" },
+  { zh: "我能问你一个简短的问题吗？",        en: "Can I ask you a quick question?" },
+  { zh: "能给我一杯水吗？",                  en: "Could I get a glass of water, please?" },
+  { zh: "我坐这里可以吗？",                  en: "Would it be okay if I sit here?" },
+  { zh: "这里有人吗？",                      en: "Is this seat taken?" },
+  { zh: "你需要帮忙吗？",                    en: "Do you need a hand?" },
+  { zh: "如果你需要什么，告诉我。",          en: "Let me know if you need anything." },
+  { zh: "我能帮你拿点什么吗？",              en: "Can I get you anything?" },
+  { zh: "那太好了，谢谢你。",                en: "That would be great, thank you." },
+  { zh: "非常感谢你的帮助。",                en: "I really appreciate your help." },
+  { zh: "能给我一张收据吗？",                en: "Could I get a receipt, please?" },
+  { zh: "能帮我拍张照片吗？",                en: "Could you take a photo for me?" },
+  { zh: "能借我一下你的手机吗？",            en: "Could I borrow your phone for a second?" },
+  { zh: "能帮我查一下时间吗？",              en: "Could you tell me what time it is?" },
+  { zh: "能帮我指个路吗？",                  en: "Could you give me directions?" },
+  { zh: "请不要大声说话。",                  en: "Please do not speak loudly." },
+  { zh: "请帮我开灯。",                      en: "Please turn on the light." },
+  { zh: "请把门打开。",                      en: "Please open the door." },
+  { zh: "请把门关上。",                      en: "Please close the door." },
+  { zh: "请保持安静。",                      en: "Please keep it down." },
+  { zh: "请在这里签名。",                    en: "Please sign here." },
+  { zh: "请稍等一下。",                      en: "Please hold on a moment." },
+  { zh: "请跟我来。",                        en: "Please follow me." },
+  { zh: "不好意思，借过一下。",              en: "Excuse me, may I get through?" },
+  { zh: "劳驾，请问洗手间在哪里？",          en: "Excuse me, where is the restroom?" },
+  { zh: "打扰一下，请问几点了？",            en: "Sorry to bother you, do you have the time?" },
+  { zh: "不好意思，我迟到了。",              en: "I'm sorry I'm late." },
+  { zh: "谢谢你等我。",                      en: "Thanks for waiting for me." },
+
+  // ═══════════════════════════════════════════════════════
+  // 5. 确认与澄清 (Confirmation & Clarification) — 22句
+  // ═══════════════════════════════════════════════════════
+  { zh: "抱歉，我没听清。",                  en: "Sorry, I didn't catch that." },
+  { zh: "你能再说一遍吗？",                  en: "Could you say that again, please?" },
+  { zh: "你能说慢一点吗？",                  en: "Could you speak a little slower?" },
+  { zh: "你能大点声吗？",                    en: "Could you speak up a little?" },
+  { zh: "你这是什么意思？",                  en: "What do you mean by that?" },
+  { zh: "那个怎么拼写？",                    en: "How do you spell that?" },
+  { zh: "确认一下，我们三点见面，对吗？",    en: "Just to confirm, we meet at three, right?" },
+  { zh: "你是说下周一吗？",                  en: "Did you mean next Monday?" },
+  { zh: "我理解得对吗？",                    en: "Am I understanding you correctly?" },
+  { zh: "你能解释一下你的理由吗？",          en: "Could you explain your reasoning?" },
+  { zh: "你能举个例子吗？",                  en: "Could you give me an example?" },
+  { zh: "我不确定我是否明白。",              en: "I'm not sure I understand." },
+  { zh: "我有点困惑。",                      en: "I'm a little confused." },
+  { zh: "你能说得更具体一点吗？",            en: "Could you be more specific?" },
+  { zh: "这对你来说合理吗？",                en: "Does that work for you?" },
+  { zh: "让我确认一下我的理解。",            en: "Let me make sure I understand." },
+  { zh: "换句话说，你的意思是……",            en: "In other words, you mean..." },
+  { zh: "我听说的不是这样。",                en: "That's not what I heard." },
+  { zh: "也许我误解了你的意思。",            en: "Maybe I misunderstood you." },
+  { zh: "让我查一下。",                      en: "Let me check." },
+  { zh: "我不确定。",                        en: "I'm not sure about that." },
+  { zh: "等等，让我理清一下思路。",          en: "Wait, let me get this straight." },
+
+  // ═══════════════════════════════════════════════════════
+  // 6. 安排与计划 (Scheduling & Plans) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你明天下午有空吗？",                en: "Are you free tomorrow afternoon?" },
+  { zh: "什么时间对你最合适？",              en: "What time works best for you?" },
+  { zh: "我们下午三点见面吧。",              en: "Let's meet at three p.m." },
+  { zh: "周五对你合适吗？",                  en: "Does Friday work for you?" },
+  { zh: "我们能改期吗？",                    en: "Can we reschedule?" },
+  { zh: "我明天之前回复你。",                en: "I'll get back to you by tomorrow." },
+  { zh: "我会记在日历上。",                  en: "I'll put it on my calendar." },
+  { zh: "我们本周晚些时候再联系。",          en: "Let's touch base later this week." },
+  { zh: "我们能快速通个电话吗？",            en: "Can we do a quick call?" },
+  { zh: "我可以改天吗？",                    en: "Can I take a rain check?" },
+  { zh: "假期有什么安排吗？",                en: "Do you have any plans for the holidays?" },
+  { zh: "我打算去短途旅行。",                en: "I'm thinking of going on a short trip." },
+  { zh: "你打算去哪儿？",                    en: "Where do you plan to go?" },
+  { zh: "你有什么生日愿望？",                en: "What are your birthday plans?" },
+  { zh: "我们什么时候碰头？",                en: "When should we meet up?" },
+  { zh: "几点来接你？",                      en: "What time should I pick you up?" },
+  { zh: "我们可以提前到。",                  en: "We can get there early." },
+  { zh: "我准时到。",                        en: "I'll be on time." },
+  { zh: "我可能稍微晚几分钟。",              en: "I might be a few minutes late." },
+  { zh: "抱歉，我临时有事。",                en: "Sorry, something came up." },
+  { zh: "我们不见不散。",                    en: "It's a date then." },
+  { zh: "这周晚些时候再约。",                en: "Let's plan something for later in the week." },
+  { zh: "先确认一下时间和地点。",            en: "Let's confirm the time and place first." },
+  { zh: "地点定在市中心怎么样？",            en: "How about meeting downtown?" },
+  { zh: "我下午两点有个会。",                en: "I have a meeting at two p.m." },
+  { zh: "能帮我把日程安排一下吗？",          en: "Could you help me arrange the schedule?" },
+  { zh: "下周我们再详细讨论。",              en: "Let's discuss the details next week." },
+  { zh: "先这样定了。",                      en: "Let's go with that for now." },
+
+  // ═══════════════════════════════════════════════════════
+  // 7. 购物与金钱 (Shopping & Money) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "这个多少钱？",                      en: "How much is this?" },
+  { zh: "我只是看看，谢谢。",                en: "I'm just looking, thanks." },
+  { zh: "这个有中号的吗？",                  en: "Do you have this in a medium?" },
+  { zh: "这个有折扣吗？",                    en: "Is there a discount on this?" },
+  { zh: "我可以刷卡吗？",                    en: "Can I pay by card?" },
+  { zh: "你们收快递费吗？",                  en: "Do you charge for delivery?" },
+  { zh: "我可以退货或换货吗？",              en: "Can I return or exchange this?" },
+  { zh: "试衣间在哪里？",                    en: "Where is the fitting room?" },
+  { zh: "太贵了！",                          en: "It's too expensive!" },
+  { zh: "可以便宜点吗？",                    en: "Can you give me a better price?" },
+  { zh: "我想买这个。",                      en: "I'd like to buy this one." },
+  { zh: "这个有保修吗？",                    en: "Does this come with a warranty?" },
+  { zh: "有其他颜色可选吗？",                en: "Are there other colors available?" },
+  { zh: "这个尺寸适合我吗？",                en: "Will this size fit me?" },
+  { zh: "我想要大一号的。",                  en: "I'd like a size up." },
+  { zh: "我要这件。",                        en: "I'll take this one." },
+  { zh: "可以包起来送人吗？",                en: "Can you wrap this as a gift?" },
+  { zh: "有购物袋吗？",                      en: "Do you have a shopping bag?" },
+  { zh: "这是找你的零钱。",                  en: "Here's your change." },
+  { zh: "我用现金支付。",                    en: "I'll pay in cash." },
+  { zh: "可以用二维码支付吗？",              en: "Can I pay with a QR code?" },
+  { zh: "这件衣服正在清仓。",                en: "This item is on clearance." },
+  { zh: "这是新品吗？",                      en: "Is this a new arrival?" },
+  { zh: "我能先试穿一下吗？",                en: "Can I try this on first?" },
+  { zh: "这衣服有点紧。",                    en: "This is a bit tight." },
+  { zh: "这双鞋很舒服。",                    en: "These shoes are really comfortable." },
+  { zh: "有更实惠的选择吗？",                en: "Do you have something more affordable?" },
+  { zh: "谢谢你，我可以再考虑一下。",        en: "Thank you, let me think about it." },
+
+  // ═══════════════════════════════════════════════════════
+  // 8. 用餐与服务 (Dining & Service) — 32句
+  // ═══════════════════════════════════════════════════════
+  { zh: "请给我们一张两人桌。",              en: "A table for two, please." },
+  { zh: "能给我们看一下菜单吗？",            en: "Could we see the menu, please?" },
+  { zh: "你有什么推荐的吗？",                en: "What do you recommend?" },
+  { zh: "我要鸡肉沙拉，谢谢。",              en: "I'll have the chicken salad, please." },
+  { zh: "能给我们结账吗？",                  en: "Could we have the check, please?" },
+  { zh: "我们可以AA制吗？",                  en: "Can we split the bill?" },
+  { zh: "这家餐厅的食物很美味。",            en: "The food at this restaurant is delicious." },
+  { zh: "意大利菜最好吃！",                  en: "Italian food is the best!" },
+  { zh: "你想吃什么？",                      en: "What are you in the mood for?" },
+  { zh: "吃意大利菜怎么样？",                en: "How about some Italian food?" },
+  { zh: "这菜品怎么样？",                    en: "How is this dish?" },
+  { zh: "我对某种食物过敏。",                en: "I'm allergic to a certain kind of food." },
+  { zh: "我要买单。",                        en: "I'd like the bill, please." },
+  { zh: "太累了不想做饭。",                  en: "I'm too tired to cook." },
+  { zh: "我非常喜欢泰国菜！",                en: "I love Thai food!" },
+  { zh: "我尝过一次章鱼，很特别！",           en: "I tried octopus once. It was unique!" },
+  { zh: "我在一家小意大利餐厅吃过超棒的一餐。", en: "I had an amazing meal at a little Italian restaurant." },
+  { zh: "你们有素食选项吗？",                en: "Do you have vegetarian options?" },
+  { zh: "我要一份牛排，五分熟。",            en: "I'll have a steak, medium rare." },
+  { zh: "这汤非常鲜美。",                    en: "This soup is very flavorful." },
+  { zh: "我吃不下了。",                      en: "I can't eat any more." },
+  { zh: "味道好极了！",                      en: "This tastes amazing!" },
+  { zh: "这顿饭很丰盛。",                    en: "That was a hearty meal." },
+  { zh: "我最喜欢家常菜。",                  en: "Home-cooked meals are my favorite." },
+  { zh: "你厨艺真不错！",                    en: "You're a great cook!" },
+  { zh: "下次我做给你吃。",                  en: "I'll cook for you next time." },
+  { zh: "你饿了吗？",                        en: "Are you hungry?" },
+  { zh: "等位要等多久？",                    en: "How long is the wait?" },
+  { zh: "我预约过。",                        en: "I have a reservation." },
+  { zh: "请问有户外座位吗？",                en: "Do you have outdoor seating?" },
+  { zh: "能给我一杯温水吗？",                en: "Could I have a glass of warm water?" },
+  { zh: "非常感谢这顿美食！",                en: "Thank you for the wonderful meal!" },
+
+  // ═══════════════════════════════════════════════════════
+  // 9. 旅行与方向 (Travel & Directions) — 30句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我怎么去火车站？",                  en: "How do I get to the train station?" },
+  { zh: "步行能到吗？",                      en: "Is it within walking distance?" },
+  { zh: "我应该坐哪路公交车？",              en: "Which bus should I take?" },
+  { zh: "到那里要多长时间？",                en: "How long does it take to get there?" },
+  { zh: "这是对的站台吗？",                  en: "Is this the right platform?" },
+  { zh: "是单程还是往返？",                  en: "Is it one-way or round-trip?" },
+  { zh: "你能在地图上指给我看吗？",          en: "Could you show me on the map?" },
+  { zh: "我想我迷路了。",                    en: "I think I'm lost." },
+  { zh: "我们走吧！",                        en: "Let's get going!" },
+  { zh: "你能帮我叫辆出租车吗？",            en: "Can you call a taxi for me?" },
+  { zh: "请帮我叫辆出租车。",                en: "Please help me call a taxi." },
+  { zh: "我想去……",                          en: "I want to go to..." },
+  { zh: "我喜欢探索新地方。",                en: "I love exploring new places." },
+  { zh: "我去过的最喜欢的地方是日本。",       en: "I really enjoyed visiting Japan." },
+  { zh: "我喜欢去海边。",                    en: "I really enjoy going to the beach." },
+  { zh: "大海的声音让人很平静。",            en: "The sound of the waves is so calming." },
+  { zh: "我更喜欢海滩。",                    en: "I prefer the beach." },
+  { zh: "日本真棒！",                        en: "Japan is amazing!" },
+  { zh: "这趟旅行超出我的预期。",            en: "This trip exceeded my expectations." },
+  { zh: "请在下一个路口左转。",              en: "Please turn left at the next corner." },
+  { zh: "请直走，然后右转。",                en: "Go straight and then turn right." },
+  { zh: "医院在邮局的对面。",                en: "The hospital is across from the post office." },
+  { zh: "这个城市公共交通很便利。",          en: "This city has great public transportation." },
+  { zh: "护照还在有效期内吗？",              en: "Is your passport still valid?" },
+  { zh: "我订了靠窗的座位。",                en: "I booked a window seat." },
+  { zh: "我想升级到头等舱。",                en: "I'd like to upgrade to first class." },
+  { zh: "请问登机口在哪里？",                en: "Excuse me, where is the gate?" },
+  { zh: "航班延误了。",                      en: "The flight is delayed." },
+  { zh: "我想要靠过道的座位。",              en: "I prefer an aisle seat." },
+  { zh: "祝你有愉快的旅程！",                en: "Have a nice trip!" },
+
+  // ═══════════════════════════════════════════════════════
+  // 10. 电话与在线 (Phone & Online) — 20句
+  // ═══════════════════════════════════════════════════════
+  { zh: "请问我能和莎拉说话吗？",            en: "May I speak to Sarah, please?" },
+  { zh: "你的信号不好，听不清。",            en: "You're breaking up." },
+  { zh: "我一会儿给你回电话。",              en: "I'll call you back in a minute." },
+  { zh: "你能听清我说话吗？",                en: "Can you hear me okay?" },
+  { zh: "我会把链接发给你。",                en: "I'll send you the link." },
+  { zh: "我现在分享我的屏幕。",              en: "I'll share my screen now." },
+  { zh: "你会说英语吗？",                    en: "Do you speak English?" },
+  { zh: "请问您是哪位？",                    en: "Who's calling, please?" },
+  { zh: "他目前不方便接电话。",              en: "He's not available right now." },
+  { zh: "请留言，我会回复你。",              en: "Please leave a message and I'll get back to you." },
+  { zh: "我的电话快没电了。",                en: "My phone is about to die." },
+  { zh: "网络信号有点弱。",                  en: "The signal is a bit weak." },
+  { zh: "视频会议效果不太好。",              en: "The video call quality isn't great." },
+  { zh: "你能听到我的声音吗？",              en: "Can you hear me?" },
+  { zh: "我这边有点噪音，稍等。",            en: "There's some background noise, hold on." },
+  { zh: "我把会议录音了。",                  en: "I recorded the meeting." },
+  { zh: "你能把会议记录发给我吗？",          en: "Can you send me the meeting notes?" },
+  { zh: "视频关一下。",                      en: "Please turn off your camera." },
+  { zh: "我静音了，说完了。",                en: "I'm on mute. I'm done speaking." },
+  { zh: "我把文件上传到云端了。",            en: "I've uploaded the file to the cloud." },
+
+  // ═══════════════════════════════════════════════════════
+  // 11. 工作日常 (Work Daily) — 32句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你有空吗？",                        en: "Do you have a minute?" },
+  { zh: "你能给我简要汇报一下项目进展吗？",   en: "Could you give me a quick update on the project?" },
+  { zh: "我们开始开会吧。",                  en: "Let's kick off the meeting." },
+  { zh: "你能给我们详细讲解一下吗？",        en: "Could you walk us through this?" },
+  { zh: "这个任务的状态如何？",              en: "What's the status on this task?" },
+  { zh: "截止日期是什么时候？",              en: "What's the deadline?" },
+  { zh: "我来处理。",                        en: "I'll take care of it." },
+  { zh: "会后我会跟进。",                    en: "I'll follow up after the meeting." },
+  { zh: "我们私下再讨论这个吧。",            en: "Let's take this offline." },
+  { zh: "行动事项有哪些？",                  en: "What are the action items?" },
+  { zh: "我们讨论一下这个问题吧。",          en: "Let's discuss this issue." },
+  { zh: "我确认一下时间安排。",              en: "Let me confirm the schedule." },
+  { zh: "我最近忙着一个新任务。",            en: "I've been really busy with a new assignment." },
+  { zh: "如果有需要帮忙的告诉我。",          en: "Let me know if you need any help." },
+  { zh: "你是做哪类工作的？",                en: "What kind of work do you do?" },
+  { zh: "你读什么专业？",                    en: "What is your field of study?" },
+  { zh: "我们先头脑风暴一下。",              en: "Let's brainstorm first." },
+  { zh: "你觉得这个方案怎么样？",              en: "What do you think of this plan?" },
+  { zh: "我们需要更多的数据支持。",          en: "We need more data to support this." },
+  { zh: "我已经完成了初稿。",                en: "I've finished the first draft." },
+  { zh: "请在周五之前提交报告。",            en: "Please submit the report by Friday." },
+  { zh: "我们需要争取更多资源。",            en: "We need to advocate for more resources." },
+  { zh: "这是目前最大的瓶颈。",              en: "This is our biggest bottleneck right now." },
+  { zh: "我同意，我们需要换个思路。",        en: "I agree, we need to rethink our approach." },
+  { zh: "这个项目比预期更复杂。",            en: "This project is more complex than expected." },
+  { zh: "团队合作非常重要。",                en: "Teamwork is very important." },
+  { zh: "我们需要设定明确的目标。",          en: "We need to set clear goals." },
+  { zh: "我已经把任务分配下去了。",          en: "I've delegated the tasks." },
+  { zh: "我们需要权衡利弊。",                en: "We need to weigh the pros and cons." },
+  { zh: "这次汇报做得很出色。",              en: "This presentation was excellent." },
+  { zh: "你可以信任我的判断。",              en: "You can trust my judgment on this." },
+  { zh: "我们先把优先级排好。",              en: "Let's prioritize first." },
+
+  // ═══════════════════════════════════════════════════════
+  // 12. 观点与态度 (Opinions & Attitudes) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我认为这是个好主意。",              en: "I think this is a great idea." },
+  { zh: "在我看来，我们应该等等。",          en: "In my view, we should wait." },
+  { zh: "从我的角度来看，这有风险。",        en: "From my perspective, it's risky." },
+  { zh: "有道理。",                          en: "That makes sense." },
+  { zh: "我同意你的看法。",                  en: "I agree with you." },
+  { zh: "我明白你的观点，但我不同意。",      en: "I see your point, but I disagree." },
+  { zh: "我不太确定我理解了。",              en: "I'm not sure I follow." },
+  { zh: "我们保留各自的意见吧。",            en: "Let's agree to disagree." },
+  { zh: "我愿意接受其他想法。",              en: "I'm open to other ideas." },
+  { zh: "这是最好的选择。",                  en: "This is the best choice." },
+  { zh: "这听起来是个好主意！",              en: "That sounds like a great idea!" },
+  { zh: "算我一个！",                        en: "Count me in!" },
+  { zh: "我的想法和你一样。",                en: "I'm of the same mind as you." },
+  { zh: "老实说，我有点担心。",              en: "Honestly, I'm a bit worried." },
+  { zh: "我需要再想想。",                    en: "I need to think about it some more." },
+  { zh: "这确实值得探讨。",                  en: "That's definitely worth exploring." },
+  { zh: "我觉得这个计划行不通。",            en: "I don't think this plan will work." },
+  { zh: "这需要更多的思考。",                en: "This needs more thought." },
+  { zh: "我认为这很合理。",                  en: "I think this is reasonable." },
+  { zh: "坦白说，我不喜欢这个主意。",        en: "To be honest, I'm not fond of this idea." },
+  { zh: "我觉得你高估了风险。",              en: "I think you're overestimating the risk." },
+  { zh: "这个建议值得认真考虑。",            en: "This suggestion deserves serious consideration." },
+  { zh: "我目前没有明确的看法。",              en: "I don't have a strong opinion on this right now." },
+  { zh: "这是我的个人看法，仅供参考。",      en: "This is just my two cents." },
+  { zh: "我尊重你的选择。",                  en: "I respect your decision." },
+  { zh: "让我们折中一下。",                  en: "Let's meet in the middle." },
+  { zh: "这问题见仁见智。",                  en: "It's a matter of opinion." },
+  { zh: "时间会证明一切。",                  en: "Time will tell." },
+
+  // ═══════════════════════════════════════════════════════
+  // 13. 紧急与问题 (Emergencies & Problems) — 24句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我需要帮助。",                      en: "I need help." },
+  { zh: "这是紧急情况。",                    en: "It's an emergency." },
+  { zh: "请拨打紧急服务电话。",              en: "Please call emergency services." },
+  { zh: "我的钱包丢了。",                    en: "I've lost my wallet." },
+  { zh: "我感觉不舒服。",                      en: "I don't feel well." },
+  { zh: "账单上有错误。",                    en: "There's a mistake on the bill." },
+  { zh: "我的手机坏了。",                    en: "My phone isn't working." },
+  { zh: "救命！",                            en: "Help!" },
+  { zh: "我需要医生。",                      en: "I need a doctor." },
+  { zh: "厕所在哪里？",                      en: "Where's the bathroom?" },
+  { zh: "借过一下。",                        en: "Please let me go through." },
+  { zh: "我的航班取消了。",                  en: "My flight has been cancelled." },
+  { zh: "钥匙锁在家里了。",                  en: "I locked myself out of my house." },
+  { zh: "我的车发动不了了。",                en: "My car won't start." },
+  { zh: "这个软件出问题了。",                en: "This software is acting up." },
+  { zh: "我血压有点高。",                    en: "My blood pressure is a bit high." },
+  { zh: "我食物中毒了。",                    en: "I have food poisoning." },
+  { zh: "我的航班延误了两个小时。",          en: "My flight was delayed by two hours." },
+  { zh: "行李丢了，我该怎么办？",            en: "My luggage is lost. What should I do?" },
+  { zh: "我的信用卡被盗刷了。",              en: "My credit card was used fraudulently." },
+  { zh: "我被锁在门外了。",                  en: "I'm locked out." },
+  { zh: "火！快跑！",                        en: "Fire! Get out!" },
+  { zh: "我过敏了。",                        en: "I'm having an allergic reaction." },
+  { zh: "我找不到出口。",                    en: "I can't find the exit." },
+
+  // ═══════════════════════════════════════════════════════
+  // 14. 情感与日常 (Emotions & Daily Life) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "别让我失望。",                      en: "Don't let me down." },
+  { zh: "今天早上交通很糟糕。",              en: "The traffic was terrible this morning." },
+  { zh: "我想减少咖啡因的摄入量。",          en: "I'm trying to cut down on caffeine." },
+  { zh: "你真是个天才。",                    en: "You're a genius." },
+  { zh: "你好有勇气。",                      en: "I admire your courage." },
+  { zh: "这本书一点都不有趣。",              en: "This book is not interesting at all." },
+  { zh: "我已经筋疲力尽了。",                en: "I'm completely exhausted." },
+  { zh: "你看起来很累。",                    en: "You look very tired." },
+  { zh: "往好的方面想。",                    en: "Look at the bright side." },
+  { zh: "我通过了面试。",                    en: "I passed the interview." },
+  { zh: "我最近工作很忙。",                  en: "I've been really busy with work lately." },
+  { zh: "还不错，就老样子。",                en: "Not too bad, just the usual." },
+  { zh: "别担心，一切都会好的。",            en: "Don't worry, everything will be fine." },
+  { zh: "我感到非常紧张。",                  en: "I feel really nervous." },
+  { zh: "我压力很大。",                      en: "I'm under a lot of stress." },
+  { zh: "我需要休息一下。",                  en: "I need to take a break." },
+  { zh: "我今天心情很好。",                  en: "I'm in a great mood today." },
+  { zh: "我有点失落。",                      en: "I'm feeling a bit down." },
+  { zh: "我感到非常自豪。",                  en: "I feel really proud." },
+  { zh: "这让我非常感动。",                  en: "This really touched me." },
+  { zh: "我等不及了！",                      en: "I can't wait!" },
+  { zh: "真让人沮丧。",                      en: "That's frustrating." },
+  { zh: "我有点尴尬。",                      en: "I'm a little embarrassed." },
+  { zh: "我不知道该说什么好。",              en: "I don't know what to say." },
+  { zh: "我感到很高兴。",                    en: "I feel so happy." },
+  { zh: "我感到有点焦虑。",                  en: "I'm feeling a bit anxious." },
+  { zh: "我充满期待。",                      en: "I'm full of anticipation." },
+  { zh: "我很享受这个时刻。",                en: "I'm really enjoying this moment." },
+
+  // ═══════════════════════════════════════════════════════
+  // 15. 电影与追剧 (Movies & TV) — 24句
+  // ═══════════════════════════════════════════════════════
+  { zh: "最近你在看什么剧？",                en: "What have you been watching recently?" },
+  { zh: "我开始追一部新剧，真有趣！",        en: "I started a new series; it's really interesting!" },
+  { zh: "我正想找新剧看。",                  en: "I'm looking for something new to watch." },
+  { zh: "听起来不错！我会试试看的。",        en: "Sounds good! I'll give it a try." },
+  { zh: "你看了大家在讨论的新电影了吗？",   en: "Did you watch that new movie everyone's talking about?" },
+  { zh: "还没，但在我的片单上。你看了吗？",  en: "Not yet, but it's on my list. Have you?" },
+  { zh: "如果我们想的话，可以一起看！",      en: "Let's watch it together if you want!" },
+  { zh: "周六晚上怎么样？",                  en: "How about Saturday night?" },
+  { zh: "我喜欢看纪录片。",                  en: "I enjoy watching documentaries." },
+  { zh: "尤其是关于自然的。",                en: "Especially ones about nature." },
+  { zh: "下雨天你最喜欢做什么？",            en: "What's your favorite way to spend a rainy day?" },
+  { zh: "我喜欢一边喝热饮一边看书。",        en: "I love reading with a warm drink." },
+  { zh: "你觉得这部电影怎么样？",            en: "What did you think of the movie?" },
+  { zh: "结尾有点出乎意料。",                en: "The ending was a bit unexpected." },
+  { zh: "剧情太拖沓了。",                    en: "The plot drags on too much." },
+  { zh: "男主角演技太棒了。",                en: "The lead actor's performance was outstanding." },
+  { zh: "这个剧每一集都让人惊喜。",          en: "This show gets better with every episode." },
+  { zh: "我被剧透了吗？",                    en: "Did I get spoiled?" },
+  { zh: "我不想知道结局！",                  en: "I don't want to know the ending!" },
+  { zh: "下周还有新的一季。",                en: "The new season comes out next week." },
+  { zh: "我去电影院更喜欢看大片。",          en: "I prefer blockbusters at the movie theater." },
+  { zh: "我觉得这部电影值得再看一遍。",      en: "I think this movie is worth watching again." },
+  { zh: "字幕你看懂了吗？",                  en: "Did you understand the subtitles?" },
+  { zh: "第二季比第一季更精彩。",            en: "Season two is even better than season one." },
+
+  // ═══════════════════════════════════════════════════════
+  // 16. 运动与健身 (Sports & Fitness) — 26句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你最近还去健身房吗？",              en: "Are you still going to the gym these days?" },
+  { zh: "我在努力保持锻炼。",                en: "I'm trying to stay consistent with my workouts." },
+  { zh: "很棒！我也应该开始锻炼了。",        en: "That's great! I should probably start working out again too." },
+  { zh: "我们找个时间一起去吧，更有动力。",   en: "Let's go together sometime. It'll be more motivating." },
+  { zh: "我开始打网球了，很好玩！",          en: "I've started playing tennis. It's really fun!" },
+  { zh: "网球是很好的锻炼！",                en: "Tennis is a great workout!" },
+  { zh: "我们找时间一起打吧。",              en: "We should play together sometime." },
+  { zh: "我和朋友们去徒步了。",              en: "I went hiking with some friends." },
+  { zh: "风景很美。",                        en: "The view was beautiful." },
+  { zh: "你喜欢户外活动吗？",                en: "Do you enjoy outdoor activities?" },
+  { zh: "我喜欢亲近大自然。",                en: "I love being in nature." },
+  { zh: "我每天跑步三公里。",                en: "I run three kilometers every day." },
+  { zh: "游泳是全身运动。",                  en: "Swimming is a full-body exercise." },
+  { zh: "瑜伽让我身心放松。",                en: "Yoga helps me relax both mind and body." },
+  { zh: "今天我做了力量训练。",              en: "I did strength training today." },
+  { zh: "健身房里人很多。",                  en: "The gym is really crowded." },
+  { zh: "我报名了马拉松。",                  en: "I signed up for a marathon." },
+  { zh: "骑行是一项很棒的有氧运动。",        en: "Cycling is a great cardio exercise." },
+  { zh: "我在控制饮食配合健身。",            en: "I'm watching my diet while working out." },
+  { zh: "柔韧性也需要练习。",                en: "Flexibility needs practice too." },
+  { zh: "运动后要记得拉伸。",                en: "Don't forget to stretch after exercise." },
+  { zh: "我坚持每周打篮球。",                en: "I play basketball every week." },
+  { zh: "乒乓球是很好的休闲运动。",          en: "Table tennis is a great recreational sport." },
+  { zh: "我们周末去爬山吧！",                en: "Let's go mountain climbing this weekend!" },
+  { zh: "我的目标是增肌五公斤。",            en: "My goal is to gain five kilograms of muscle." },
+  { zh: "运动分泌的内啡肽让人快乐。",        en: "Exercise releases endorphins that make you happy." },
+
+  // ═══════════════════════════════════════════════════════
+  // 17. 美食与烹饪 (Food & Cooking) — 26句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你今晚想点外卖还是自己做饭？",      en: "Do you feel like ordering food or cooking tonight?" },
+  { zh: "还记得我们上个月去的那家餐厅吗？",  en: "Do you remember that restaurant we went to last month?" },
+  { zh: "食物很棒！",                        en: "The food was amazing." },
+  { zh: "我在想念我们吃的那个意面。",        en: "I'm craving that pasta we had." },
+  { zh: "意大利面总是个不错的选择！",        en: "Pasta is always a good choice!" },
+  { zh: "有空过来一起吃饭吗？",              en: "Would you like to come over for dinner sometime?" },
+  { zh: "我很乐意！告诉我什么时候吧。",      en: "I'd love to! Let me know when." },
+  { zh: "太好了，我会准备特别的菜！",        en: "Great, I'll prepare something special!" },
+  { zh: "期待！",                            en: "Looking forward to it!" },
+  { zh: "你最喜欢做的菜是什么？",            en: "What's your favorite dish to cook?" },
+  { zh: "我喜欢做意大利面。",                en: "I love making pasta dishes." },
+  { zh: "我喜欢品尝不同的美食。",            en: "I enjoy trying different cuisines." },
+  { zh: "中餐的烹饪技巧很多。",              en: "Chinese cuisine has so many cooking techniques." },
+  { zh: "我正在学做日本料理。",              en: "I'm learning to make Japanese food." },
+  { zh: "你尝尝这个味道怎么样？",            en: "Try this and tell me what you think." },
+  { zh: "火候掌握得刚刚好。",                en: "The heat was just right." },
+  { zh: "这道菜需要慢火炖两个小时。",        en: "This dish needs to simmer for two hours." },
+  { zh: "我切的葱花有点粗。",                en: "I chopped the green onions a bit too roughly." },
+  { zh: "要加点盐吗？",                      en: "Do you want me to add some salt?" },
+  { zh: "这个配方不需要放糖。",              en: "This recipe doesn't need any sugar." },
+  { zh: "油热了，可以下锅了。",              en: "The oil is hot, ready to add the ingredients." },
+  { zh: "食材要提前准备好。",                en: "All ingredients should be prepped in advance." },
+  { zh: "烤箱预热到180度。",                en: "Preheat the oven to 180 degrees." },
+  { zh: "这道菜是我的拿手好菜。",            en: "This dish is my signature recipe." },
+  { zh: "明天中午带饭，你吃什么？",          en: "What do you want for lunch tomorrow?" },
+  { zh: "我喜欢自己动手做饭，既健康又省钱。", en: "I love cooking for myself; it's healthy and saves money." },
+
+  // ═══════════════════════════════════════════════════════
+  // 18. 爱好与兴趣 (Hobbies & Interests) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "有什么书推荐吗？",                  en: "Do you have any book recommendations?" },
+  { zh: "我刚读完一本很棒的小说，你会喜欢的！", en: "I just finished a fantastic novel. You'd love it!" },
+  { zh: "我加到我的书单里。",                en: "I'll add it to my reading list." },
+  { zh: "我刚读完一本推理小说。",            en: "I just finished a mystery novel." },
+  { zh: "有推荐的吗？",                      en: "Any recommendations?" },
+  { zh: "非常值得一读！",                    en: "Really worth a read!" },
+  { zh: "你周末想去逛街吗？",                en: "Do you want to go shopping this weekend?" },
+  { zh: "我正好需要买些东西。",              en: "I could use a few new things." },
+  { zh: "我最近在学摄影。",                  en: "I've started learning photography." },
+  { zh: "我开始做园艺了。",                  en: "I've started gardening." },
+  { zh: "园艺听起来很放松。",                en: "Gardening sounds so relaxing." },
+  { zh: "我喜欢画画和绘画。",                en: "I enjoy drawing and painting." },
+  { zh: "太棒了！我想看看你的作品。",        en: "That's amazing! I'd love to see your artwork sometime." },
+  { zh: "我的爱好是收集邮票。",              en: "My hobby is collecting stamps." },
+  { zh: "我热衷于旅行和摄影。",              en: "I'm passionate about traveling and photography." },
+  { zh: "我周末经常去钓鱼。",                en: "I go fishing on weekends often." },
+  { zh: "我试着培养新的爱好。",              en: "I'm trying to pick up a new hobby." },
+  { zh: "学吉他需要耐心。",                  en: "Learning guitar takes patience." },
+  { zh: "我加入了绘画班。",                  en: "I joined a painting class." },
+  { zh: "冥想是一种很好的放松方式。",        en: "Meditation is a great way to relax." },
+  { zh: "你有什么业余爱好？",                en: "What are your hobbies?" },
+  { zh: "我在学一门新语言。",                en: "I'm learning a new language." },
+  { zh: "你做过手工艺品吗？",                en: "Have you ever done any crafts?" },
+  { zh: "我喜欢养多肉植物。",                en: "I love growing succulents." },
+  { zh: "这个爱好让我感到充实。",            en: "This hobby gives me a sense of fulfillment." },
+  { zh: "我正在学烘焙。",                    en: "I'm learning to bake." },
+  { zh: "你听过播客吗？有什么推荐的吗？",     en: "Have you heard of podcasts? Any recommendations?" },
+  { zh: "我业余时间做志愿者。",              en: "I volunteer in my free time." },
+
+  // ═══════════════════════════════════════════════════════
+  // 19. 旅行与探索 (Travel & Exploration) — 26句
+  // ═══════════════════════════════════════════════════════
+  { zh: "你喜欢旅游吗？",                    en: "Do you like to travel?" },
+  { zh: "去过的地方中最喜欢哪里？",          en: "What's your favorite place you've visited?" },
+  { zh: "在日本吃过很棒的寿司。",            en: "The sushi was incredible in Japan." },
+  { zh: "真想有一天去日本。",                en: "I would love to visit Japan someday." },
+  { zh: "我们应该找时间去旅行！",            en: "We should plan a trip together sometime!" },
+  { zh: "你更喜欢海滩还是山？",              en: "Do you prefer the beach or the mountains?" },
+  { zh: "海滩和山我都喜欢。",                en: "I love both the beach and the mountains." },
+  { zh: "你最喜欢哪个季节？",                en: "What's your favorite season?" },
+  { zh: "我喜欢秋天，颜色很美。",            en: "I love autumn. The colors are so beautiful." },
+  { zh: "我们找个时间去博物馆吧！",          en: "Let's plan a museum trip soon!" },
+  { zh: "旅行开阔眼界。",                    en: "Travel broadens the mind." },
+  { zh: "这次旅行让我收获很多。",            en: "This trip was very rewarding." },
+  { zh: "那里的夜景美极了。",                en: "The night view there was breathtaking." },
+  { zh: "我带了很多纪念品回来。",            en: "I brought back a lot of souvenirs." },
+  { zh: "我提前做了很多攻略。",              en: "I did a lot of research beforehand." },
+  { zh: "这次旅行费用有点超预算。",          en: "This trip went a bit over budget." },
+  { zh: "我想去那些游客较少的地方。",        en: "I want to go places that are off the beaten path." },
+  { zh: "那里的人非常友好。",                en: "The people there were so friendly." },
+  { zh: "我推荐你去看看那个地方。",          en: "I recommend you check out that place." },
+  { zh: "防晒霜是旅行必备品。",              en: "Sunscreen is a travel essential." },
+  { zh: "我学会了用简单的外语交流。",        en: "I learned to communicate in basic foreign languages." },
+  { zh: "签证申请很顺利。",                  en: "The visa application went smoothly." },
+  { zh: "我更喜欢自由行。",                  en: "I prefer independent travel." },
+  { zh: "这次露营经历很难忘。",              en: "This camping experience was unforgettable." },
+  { zh: "我要把旅行照片整理一下。",          en: "I need to organize my travel photos." },
+  { zh: "我希望每年能去一个新的国家。",      en: "I hope to visit a new country every year." },
+
+  // ═══════════════════════════════════════════════════════
+  // 20. 教育与学校 (Education & School) — 32句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我每天早上六点起床，七点出门上学。",  en: "I wake up at six every morning and leave at seven." },
+  { zh: "我通常坐公交车去学校。",            en: "I usually take the bus to school." },
+  { zh: "我们的学校有很漂亮的图书馆。",       en: "Our school has a beautiful library." },
+  { zh: "今天的第一节课是数学。",            en: "The first class today is math." },
+  { zh: "期中考试在下周。",                  en: "The midterm exam is next week." },
+  { zh: "我已经准备好毕业论文了。",           en: "I'm ready to defend my thesis." },
+  { zh: "教授表扬了我的作业。",              en: "The professor praised my assignment." },
+  { zh: "我选修了一门关于心理学的课程。",    en: "I signed up for a course on psychology." },
+  { zh: "这个课题需要做进一步的研究。",       en: "This topic needs further research." },
+  { zh: "我们的实验结果出乎意料。",           en: "Our experimental results were surprising." },
+  { zh: "我拿到了奖学金！",                  en: "I received a scholarship!" },
+  { zh: "学分修够了吗？",                    en: "Have you earned enough credits?" },
+  { zh: "我正在申请研究生项目。",             en: "I'm applying for a graduate program." },
+  { zh: "公开演讲需要多练习。",               en: "Public speaking requires a lot of practice." },
+  { zh: "小组项目需要团队合作。",             en: "Group projects require teamwork." },
+  { zh: "参考文献要按照格式要求整理。",       en: "References should be formatted correctly." },
+  { zh: "这堂课讲的内容很有深度。",           en: "This lecture was really in-depth." },
+  { zh: "我跟不上课程的进度。",               en: "I'm falling behind in class." },
+  { zh: "老师布置了很多作业。",               en: "The teacher assigned a lot of homework." },
+  { zh: "期末考试临近了。",                   en: "Final exams are coming up." },
+  { zh: "我对这个话题非常感兴趣。",           en: "I'm very interested in this topic." },
+  { zh: "课外活动也很重要。",                 en: "Extracurricular activities are important too." },
+  { zh: "我要申请去国外交换学习。",           en: "I want to apply for an exchange program abroad." },
+  { zh: "大学生活中最难忘的是社团经历。",     en: "The most memorable part of college is the club experience." },
+  { zh: "我们班有很多优秀的同学。",           en: "There are many talented students in my class." },
+  { zh: "我在准备出国留学的申请材料。",       en: "I'm preparing my application for studying abroad." },
+  { zh: "图书馆很安静，适合自习。",           en: "The library is quiet and good for studying." },
+  { zh: "他获得了优秀毕业生的称号。",         en: "He was named an outstanding graduate." },
+  { zh: "我们需要培养批判性思维。",           en: "We need to develop critical thinking skills." },
+  { zh: "教育是改变世界的力量。",             en: "Education is a powerful force for change." },
+  { zh: "毕业典礼定在下个月。",               en: "The graduation ceremony is scheduled for next month." },
+  { zh: "我立志成为一名科学家。",             en: "I aspire to become a scientist." },
+
+  // ═══════════════════════════════════════════════════════
+  // 21. 家庭与童年 (Family & Childhood) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我有一个幸福的家庭。",              en: "I have a happy family." },
+  { zh: "我和父母关系很亲近。",              en: "I'm very close to my parents." },
+  { zh: "我有一个哥哥和一个妹妹。",          en: "I have an older brother and a younger sister." },
+  { zh: "我从小在城市长大。",                en: "I grew up in the city." },
+  { zh: "我爷爷讲的故事很有意思。",          en: "My grandfather tells the most interesting stories." },
+  { zh: "我小时候最喜欢玩的游戏是捉迷藏。",   en: "My favorite childhood game was hide and seek." },
+  { zh: "我们的邻居都很好。",                en: "Our neighbors are all very nice." },
+  { zh: "家庭聚会是一年中我最期待的时刻。",   en: "Family gatherings are what I look forward to most." },
+  { zh: "我在帮忙做家务。",                  en: "I'm helping out with the housework." },
+  { zh: "吃完饭我来洗碗。",                  en: "I'll wash the dishes after dinner." },
+  { zh: "周末我们全家去公园散步。",           en: "We go for walks in the park as a family on weekends." },
+  { zh: "我小时候养过一只小狗。",            en: "I had a puppy when I was little." },
+  { zh: "我的童年很快乐。",                  en: "I had a happy childhood." },
+  { zh: "父母对我的期望很高。",               en: "My parents have high expectations for me." },
+  { zh: "我经常给奶奶打电话。",               en: "I call my grandmother often." },
+  { zh: "家人永远是我最坚强的后盾。",         en: "Family is always my strongest support." },
+  { zh: "我小时候怕黑。",                    en: "I was afraid of the dark when I was little." },
+  { zh: "我第一次骑自行车是在七岁。",         en: "I learned to ride a bike when I was seven." },
+  { zh: "暑假我通常回老家。",                 en: "I usually go back to my hometown for summer vacation." },
+  { zh: "我们家的传统是每年拍一张全家福。",   en: "Our family tradition is to take a family photo every year." },
+  { zh: "表哥比我大三岁。",                  en: "My cousin is three years older than me." },
+  { zh: "我爱我的家人。",                    en: "I love my family." },
+  { zh: "我们每天晚上一起吃晚饭。",          en: "We have dinner together every evening." },
+  { zh: "父母总是教导我要诚实。",             en: "My parents taught me to be honest." },
+  { zh: "我正在教我的孩子学英语。",           en: "I'm teaching my child English." },
+  { zh: "孩子长大得真快。",                   en: "Kids grow up so fast." },
+  { zh: "我们周末去探望外公外婆。",           en: "We visit my grandparents on weekends." },
+  { zh: "家庭是我们温暖的港湾。",              en: "Family is our safe haven." },
+
+  // ═══════════════════════════════════════════════════════
+  // 22. 节日与庆祝 (Festivals & Celebrations) — 24句
+  // ═══════════════════════════════════════════════════════
+  { zh: "祝你生日快乐！",                    en: "Happy birthday to you!" },
+  { zh: "祝你新年快乐！",                    en: "Happy New Year!" },
+  { zh: "祝你圣诞快乐！",                    en: "Merry Christmas!" },
+  { zh: "万圣节快乐！",                      en: "Happy Halloween!" },
+  { zh: "感恩节快乐！",                      en: "Happy Thanksgiving!" },
+  { zh: "情人节快乐！",                      en: "Happy Valentine's Day!" },
+  { zh: "中秋节你有什么计划？",              en: "What are your plans for Mid-Autumn Festival?" },
+  { zh: "春节是中国人最重要的节日。",         en: "Spring Festival is the most important Chinese holiday." },
+  { zh: "除夕夜我们全家一起看春晚。",         en: "We watch the Spring Festival Gala together on New Year's Eve." },
+  { zh: "红包里装着压岁钱。",                en: "Red envelopes contain lucky money." },
+  { zh: "元宵节要吃汤圆。",                  en: "We eat tangyuan for the Lantern Festival." },
+  { zh: "端午节在五月初五。",                en: "Dragon Boat Festival falls on the fifth day of the fifth lunar month." },
+  { zh: "清明节我们去扫墓。",                en: "We visit ancestral graves for Qingming Festival." },
+  { zh: "重阳节有登高的习俗。",              en: "It's tradition to climb mountains on Double Ninth Festival." },
+  { zh: "我们买了很多年货。",                en: "We bought a lot of New Year goods." },
+  { zh: "烟花真美！",                        en: "The fireworks are beautiful!" },
+  { zh: "今晚的派对气氛很好。",              en: "The party tonight has a great vibe." },
+  { zh: "我要准备一份特别的礼物。",           en: "I need to prepare a special gift." },
+  { zh: "谢谢你的祝福！",                    en: "Thank you for the wishes!" },
+  { zh: "这个蛋糕是为你的生日准备的。",       en: "This cake is prepared for your birthday." },
+  { zh: "我们拍张纪念照吧！",                en: "Let's take a commemorative photo!" },
+  { zh: "我点了蜡烛，许了个愿。",             en: "I made a wish after lighting the candles." },
+  { zh: "庆祝成功的感觉真好。",              en: "It feels great to celebrate success." },
+  { zh: "今晚的星光格外璀璨。",               en: "The stars are especially bright tonight." },
+
+  // ═══════════════════════════════════════════════════════
+  // 23. 科技与数码 (Technology & Digital) — 28句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我的电脑运行得很慢。",              en: "My computer is running really slowly." },
+  { zh: "需要重启一下。",                    en: "It needs a restart." },
+  { zh: "密码不对，登录失败。",               en: "Wrong password, login failed." },
+  { zh: "我已经备份了重要文件。",             en: "I've backed up the important files." },
+  { zh: "WiFi信号有点弱。",                  en: "The WiFi signal is a bit weak." },
+  { zh: "这个APP用起来很顺手。",              en: "This app is very user-friendly." },
+  { zh: "我最近在学编程。",                  en: "I've been learning programming lately." },
+  { zh: "人工智能正在改变各行各业。",         en: "Artificial intelligence is transforming industries." },
+  { zh: "这个功能怎么用？",                  en: "How do I use this feature?" },
+  { zh: "我申请了一个新邮箱。",               en: "I created a new email account." },
+  { zh: "网速快了很多。",                    en: "The internet speed is much faster now." },
+  { zh: "我把照片上传到云端了。",             en: "I uploaded the photos to the cloud." },
+  { zh: "手机存储空间不足了。",               en: "My phone storage is running low." },
+  { zh: "我设了双重验证来保护账户。",         en: "I set up two-factor authentication to protect my account." },
+  { zh: "这个软件是免费的吗？",               en: "Is this software free?" },
+  { zh: "我买了一个新的硬盘。",               en: "I bought a new hard drive." },
+  { zh: "显示屏有点闪。",                    en: "The display is flickering a bit." },
+  { zh: "我需要更新一下驱动程序。",           en: "I need to update the drivers." },
+  { zh: "我的平板触摸屏不灵敏了。",           en: "My tablet touchscreen isn't very responsive." },
+  { zh: "这个插件太好用了。",                 en: "This plugin is so useful." },
+  { zh: "我要学做网站。",                    en: "I want to learn to build websites." },
+  { zh: "数据安全非常重要。",                en: "Data security is very important." },
+  { zh: "我的账号被盗了。",                   en: "My account was hacked." },
+  { zh: "我们用视频通话吧。",                 en: "Let's video call instead." },
+  { zh: "直播带货现在很火。",                 en: "Live-stream shopping is really popular right now." },
+  { zh: "这个游戏对电脑配置要求高吗？",       en: "Does this game require high computer specs?" },
+  { zh: "我更喜欢用键盘而不是触屏。",         en: "I prefer using a keyboard over a touchscreen." },
+  { zh: "充电宝是出门必备。",                 en: "A power bank is a must-have when going out." },
+
+  // ═══════════════════════════════════════════════════════
+  // 24. 环保与自然 (Environment & Nature) — 22句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我们要保护环境。",                  en: "We should protect the environment." },
+  { zh: "垃圾分类很重要。",                  en: "Waste sorting is very important." },
+  { zh: "我们应该减少使用塑料。",            en: "We should reduce our use of plastic." },
+  { zh: "低碳出行，从我做起。",              en: "Low-carbon travel starts with me." },
+  { zh: "树木能净化空气。",                  en: "Trees help purify the air." },
+  { zh: "海洋污染是一个严重的问题。",        en: "Ocean pollution is a serious problem." },
+  { zh: "我们可以骑自行车代替开车。",        en: "We can ride bikes instead of driving." },
+  { zh: "节约用水，人人有责。",              en: "Everyone is responsible for saving water." },
+  { zh: "我正在践行零垃圾生活。",            en: "I'm trying to live a zero-waste lifestyle." },
+  { zh: "太阳能是一种清洁能源。",            en: "Solar energy is a clean energy source." },
+  { zh: "砍伐森林导致了很多问题。",          en: "Deforestation has caused many problems." },
+  { zh: "野生动物的栖息地在减少。",          en: "Wildlife habitats are shrinking." },
+  { zh: "我们应该关注可持续发展。",          en: "We should focus on sustainable development." },
+  { zh: "出门记得关灯。",                    en: "Remember to turn off the lights when you leave." },
+  { zh: "我选择了可重复使用的购物袋。",      en: "I chose a reusable shopping bag." },
+  { zh: "空气污染指数今天偏高。",            en: "The air pollution index is high today." },
+  { zh: "城市里也能看到星星吗？",            en: "Can you still see stars in the city?" },
+  { zh: "我加入了一个环保志愿者组织。",      en: "I joined an environmental volunteer organization." },
+  { zh: "地球是我们唯一的家园。",            en: "Earth is our only home." },
+  { zh: "气候变化影响着每一个人。",          en: "Climate change affects everyone." },
+  { zh: "我买了本地的有机食品。",             en: "I bought local organic food." },
+  { zh: "绿色生活让世界更美好。",            en: "A green lifestyle makes the world a better place." },
+
+  // ═══════════════════════════════════════════════════════
+  // 25. 财务与理财 (Finance & Money Management) — 24句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我正在存钱买房子。",                en: "I'm saving up to buy a house." },
+  { zh: "我开通了手机银行。",                en: "I set up mobile banking." },
+  { zh: "我想申请一张信用卡。",              en: "I want to apply for a credit card." },
+  { zh: "我的工资每个月自动转账。",           en: "My salary is deposited automatically every month." },
+  { zh: "这笔开销超预算了。",                en: "This expense went over budget." },
+  { zh: "我需要开始做预算了。",              en: "I need to start budgeting." },
+  { zh: "投资有风险，入市需谨慎。",          en: "Investments involve risk; be careful when entering the market." },
+  { zh: "我把钱存在银行里吃利息。",           en: "I keep my money in the bank to earn interest." },
+  { zh: "保险很重要，是生活的保障。",         en: "Insurance is important; it's a safety net for life." },
+  { zh: "我在学理财知识。",                  en: "I'm learning financial literacy." },
+  { zh: "我上个月的花销有点大。",             en: "My spending was a bit high last month." },
+  { zh: "退休金需要提前规划。",               en: "Retirement needs to be planned ahead of time." },
+  { zh: "汇率每天都在波动。",                en: "Exchange rates fluctuate every day." },
+  { zh: "我在网上卖二手物品。",               en: "I'm selling second-hand items online." },
+  { zh: "这个月的账单来了。",                 en: "This month's bill has arrived." },
+  { zh: "分期付款可以减轻压力。",             en: "Installment plans can ease the pressure." },
+  { zh: "要理性消费，不要冲动购物。",         en: "Be a smart consumer; don't buy on impulse." },
+  { zh: "我的理财目标是三年内存够首付。",      en: "My financial goal is to save enough for a down payment in three years." },
+  { zh: "水电气费该交了。",                  en: "The utility bills are due." },
+  { zh: "我在支付宝里设置了自动转账。",       en: "I set up an automatic transfer in my payment app." },
+  { zh: "汇率换算后大概是多少？",             en: "What's the approximate amount after currency conversion?" },
+  { zh: "理财要趁早开始。",                  en: "It's never too early to start managing your finances." },
+  { zh: "我记账已经一年了。",                en: "I've been keeping track of my expenses for a year." },
+  { zh: "被动收入是实现财务自由的途径。",     en: "Passive income is a path to financial freedom." },
+
+  // ═══════════════════════════════════════════════════════
+  // 26. 目标与梦想 (Goals & Dreams) — 24句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我今年的目标是减重十公斤。",        en: "My goal this year is to lose ten kilograms." },
+  { zh: "我想成为一名工程师。",              en: "I want to become an engineer." },
+  { zh: "成功需要努力和坚持。",              en: "Success requires hard work and perseverance." },
+  { zh: "有志者事竟成。",                    en: "Where there is a will, there is a way." },
+  { zh: "我一直想创办自己的公司。",           en: "I've always wanted to start my own company." },
+  { zh: "我正在为梦想努力。",                 en: "I'm working towards my dreams." },
+  { zh: "每一天都在进步。",                   en: "I'm making progress every day." },
+  { zh: "坚持就是胜利。",                     en: "Persistence leads to victory." },
+  { zh: "我相信我能做到。",                   en: "I believe I can do it." },
+  { zh: "机会总是留给有准备的人。",           en: "Opportunities always favor the prepared." },
+  { zh: "我把大目标分解成小步骤。",           en: "I break big goals into smaller steps." },
+  { zh: "自律是成功的关键。",                 en: "Self-discipline is the key to success." },
+  { zh: "失败是成功之母。",                   en: "Failure is the mother of success." },
+  { zh: "我在一步步接近目标。",               en: "I'm getting closer to my goal step by step." },
+  { zh: "不要放弃，继续加油！",               en: "Don't give up, keep going!" },
+  { zh: "梦想还是要有的，万一实现了呢？",     en: "It's good to have dreams; you never know!" },
+  { zh: "我想在三十岁之前完成这件事。",       en: "I want to accomplish this before I turn thirty." },
+  { zh: "学习是一辈子的事。",                 en: "Learning is a lifelong journey." },
+  { zh: "我给自己设了每日目标。",             en: "I set daily goals for myself." },
+  { zh: "专注和坚持比天赋更重要。",           en: "Focus and persistence matter more than talent." },
+  { zh: "我正走在正确的道路上。",             en: "I'm on the right track." },
+  { zh: "未来可期！",                         en: "The future looks bright!" },
+  { zh: "我终于实现了我的目标！",             en: "I finally achieved my goal!" },
+  { zh: "没有什么是不可能的。",               en: "Nothing is impossible." },
+
+  // ═══════════════════════════════════════════════════════
+  // 27. 童年回忆 (Childhood Memories) — 16句
+  // ═══════════════════════════════════════════════════════
+  { zh: "我小时候最爱吃冰淇淋。",             en: "Ice cream was my favorite treat when I was little." },
+  { zh: "放学后我们常在院子里玩。",           en: "We often played in the yard after school." },
+  { zh: "我的第一辆自行车是红色的。",         en: "My first bicycle was red." },
+  { zh: "我小时候怕打雷。",                  en: "I was afraid of thunder when I was little." },
+  { zh: "我收集了很多贴纸。",                en: "I collected a lot of stickers." },
+  { zh: "夏天的晚上我常在院子里数星星。",     en: "I often counted stars in the yard on summer nights." },
+  { zh: "第一次自己做饭的记忆很深刻。",       en: "My first time cooking by myself is a vivid memory." },
+  { zh: "我小时候最喜欢的卡通片是西游记。",  en: "Journey to the West was my favorite cartoon growing up." },
+  { zh: "我小时候学过钢琴。",                en: "I took piano lessons when I was a kid." },
+  { zh: "暑假是最让人期待的时光。",           en: "Summer vacation was the most anticipated time." },
+  { zh: "我小时候做的傻事真不少。",           en: "I did a lot of silly things when I was little." },
+  { zh: "童年是无忧无虑的时光。",             en: "Childhood is a carefree time." },
+  { zh: "我小时候经常去河边抓鱼。",           en: "I often went fishing by the river when I was little." },
+  { zh: "第一次上台表演让我很紧张。",         en: "Performing on stage for the first time made me nervous." },
+  { zh: "我小学最好的朋友是同桌。",           en: "My best friend in elementary school was my deskmate." },
+  { zh: "那些童年的回忆永远珍贵。",           en: "Those childhood memories are always precious." },
+
+  // ═══════════════════════════════════════════════════════
+  // 28. 谚语与名言 (Proverbs & Wisdom) — 24句
+  // ═══════════════════════════════════════════════════════
+  { zh: "水滴石穿，绳锯木断。",              en: "Little strokes fell great oaks." },
+  { zh: "时不我待。",                        en: "Time and tide wait for no man." },
+  { zh: "熟能生巧。",                        en: "Practice makes perfect." },
+  { zh: "眼见为实。",                        en: "Seeing is believing." },
+  { zh: "条条大路通罗马。",                  en: "All roads lead to Rome." },
+  { zh: "不入虎穴，焉得虎子。",              en: "Nothing venture, nothing have." },
+  { zh: "授人以鱼不如授人以渔。",            en: "Give a man a fish and you feed him for a day; teach him to fish and you feed him for a lifetime." },
+  { zh: "世上无难事，只怕有心人。",          en: "Nothing is impossible to a willing heart." },
+  { zh: "近朱者赤，近墨者黑。",              en: "He who walks with the wise grows wise." },
+  { zh: "书山有路勤为径，学海无涯苦作舟。",   en: "There is no royal road to learning." },
+  { zh: "世上无难事，只要肯攀登。",           en: "Nothing in the world is difficult if you put your heart into it." },
+  { zh: "千里之行，始于足下。",               en: "A journey of a thousand miles begins with a single step." },
+  { zh: "活到老，学到老。",                   en: "You are never too old to learn." },
+  { zh: "知己知彼，百战不殆。",               en: "Know yourself and know your enemy, and you will never be in peril." },
+  { zh: "知足者常乐。",                       en: "Contentment brings happiness." },
+  { zh: "沉默是金。",                         en: "Silence is golden." },
+  { zh: "早起的鸟儿有虫吃。",                 en: "The early bird catches the worm." },
+  { zh: "不能以貌取人。",                     en: "You can't judge a book by its cover." },
+  { zh: "种瓜得瓜，种豆得豆。",               en: "You reap what you sow." },
+  { zh: "一寸光阴一寸金。",                   en: "Time is money." },
+  { zh: "天下没有免费的午餐。",               en: "There's no such thing as a free lunch." },
+  { zh: "患难见真情。",                       en: "A friend in need is a friend indeed." },
+  { zh: "欲速则不达。",                       en: "More haste, less speed." },
+  { zh: "笑一笑，十年少。",                   en: "Laughter is the best medicine." },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 26. 四六级必备 (CET-4/6 Essential) — 80句
+  // ═══════════════════════════════════════════════════════════════
+  { zh: "大学生应该积极参与校园活动。",         en: "College students should actively participate in campus activities." },
+  { zh: "我正在准备大学英语四级考试。",         en: "I'm preparing for the CET-4 exam." },
+  { zh: "图书馆是学习的好地方。",               en: "The library is a great place to study." },
+  { zh: "我每天坚持晨读英语。",                 en: "I make it a habit to read English every morning." },
+  { zh: "这篇论文的参考文献需要更新。",         en: "The references in this paper need to be updated." },
+  { zh: "学术诚信非常重要。",                   en: "Academic integrity is very important." },
+  { zh: "我们需要提高自主学习能力。",           en: "We need to improve our self-directed learning ability." },
+  { zh: "团队合作可以提高效率。",               en: "Teamwork can improve efficiency." },
+  { zh: "互联网改变了我们的生活方式。",         en: "The internet has changed our way of life." },
+  { zh: "全球化带来了机遇和挑战。",             en: "Globalization brings both opportunities and challenges." },
+  { zh: "环境保护是可持续发展的关键。",         en: "Environmental protection is key to sustainable development." },
+  { zh: "我们应该倡导低碳生活。",               en: "We should advocate for a low-carbon lifestyle." },
+  { zh: "科技创新推动社会进步。",               en: "Technological innovation drives social progress." },
+  { zh: "终身学习是现代人的必备素养。",         en: "Lifelong learning is an essential quality for modern people." },
+  { zh: "社会实践可以增长见识。",               en: "Social practice can broaden one's horizons." },
+  { zh: "跨文化交流越来越重要。",               en: "Cross-cultural communication is becoming increasingly important." },
+  { zh: "我们面临着就业压力。",                 en: "We are facing employment pressure." },
+  { zh: "创业需要勇气和智慧。",                 en: "Entrepreneurship requires courage and wisdom." },
+  { zh: "时间管理是一门艺术。",                 en: "Time management is an art." },
+  { zh: "健康的身体是学习的本钱。",           en: "A healthy body is the capital for learning." },
+  { zh: "我通过了英语口语考试。",               en: "I passed the English speaking test." },
+  { zh: "听力部分需要多练习。",                 en: "The listening section needs more practice." },
+  { zh: "阅读理解需要掌握技巧。",               en: "Reading comprehension requires mastering skills." },
+  { zh: "写作文要注意逻辑结构。",               en: "Essay writing requires attention to logical structure." },
+  { zh: "翻译题需要扎实的基本功。",             en: "Translation questions require a solid foundation." },
+  { zh: "单词量是英语学习的基础。",             en: "Vocabulary is the foundation of English learning." },
+  { zh: "语法错误会影响表达的准确性。",         en: "Grammar mistakes affect the accuracy of expression." },
+  { zh: "多做真题可以提高应试能力。",           en: "Doing more past papers can improve exam skills." },
+  { zh: "模拟考试有助于查漏补缺。",             en: "Mock exams help identify weaknesses." },
+  { zh: "四六级成绩对就业很重要。",             en: "CET scores are important for employment." },
+  { zh: "我计划报考研究生入学考试。",           en: "I plan to take the postgraduate entrance exam." },
+  { zh: "选修课可以拓宽知识面。",               en: "Elective courses can broaden your knowledge." },
+  { zh: "学分制鼓励学生自主选课。",             en: "The credit system encourages students to choose courses independently." },
+  { zh: "社会实践学分是毕业要求之一。",         en: "Social practice credits are one of the graduation requirements." },
+  { zh: "创新创业课程很受欢迎。",               en: "Innovation and entrepreneurship courses are very popular." },
+  { zh: "线上教学提供了学习新方式。",           en: "Online teaching provides new ways of learning." },
+  { zh: "慕课让优质教育资源触手可及。",         en: "MOOCs make quality educational resources accessible." },
+  { zh: "人工智能正在改变教育领域。",           en: "Artificial intelligence is changing the education sector." },
+  { zh: "数字化转型是大势所趋。",               en: "Digital transformation is the trend of the times." },
+  { zh: "我们应该理性看待网络信息。",           en: "We should take a rational view of online information." },
+  { zh: "网络安全意识需要普及。",               en: "Cybersecurity awareness needs to be promoted." },
+  { zh: "数据隐私保护日益重要。",               en: "Data privacy protection is becoming increasingly important." },
+  { zh: "知识产权保护意识在增强。",             en: "Awareness of intellectual property protection is increasing." },
+  { zh: "文化多样性丰富了社会生活。",           en: "Cultural diversity enriches social life." },
+  { zh: "非物质文化遗产需要传承。",             en: "Intangible cultural heritage needs to be preserved." },
+  { zh: "文化遗产是民族的精神财富。",           en: "Cultural heritage is the spiritual wealth of a nation." },
+  { zh: "旅游促进文化交流与经济发展。",         en: "Tourism promotes cultural exchange and economic development." },
+  { zh: "乡村振兴战略意义重大。",               en: "The rural revitalization strategy is of great significance." },
+  { zh: "城乡差距在逐步缩小。",                 en: "The urban-rural gap is gradually narrowing." },
+  { zh: "公共交通系统越来越完善。",             en: "The public transportation system is becoming more complete." },
+  { zh: "新能源汽车是未来发展方向。",           en: "New energy vehicles are the future direction." },
+  { zh: "垃圾分类需要全民参与。",               en: "Waste sorting requires participation from everyone." },
+  { zh: "光盘行动倡导节约粮食。",               en: "The clean plate campaign advocates for saving food." },
+  { zh: "志愿服务精神值得弘扬。",               en: "The spirit of volunteerism is worth promoting." },
+  { zh: "公益活动传递正能量。",                 en: "Public welfare activities convey positive energy." },
+  { zh: "社会责任感是公民应有的品质。",         en: "Social responsibility is a quality citizens should have." },
+  { zh: "诚信是做人的根本。",                   en: "Integrity is the foundation of being a person." },
+  { zh: "公平竞争有利于市场健康发展。",         en: "Fair competition is beneficial for healthy market development." },
+  { zh: "法治社会需要每个人遵纪守法。",         en: "A society ruled by law requires everyone to obey the law." },
+  { zh: "反腐败斗争永远在路上。",               en: "The fight against corruption is always on the road." },
+  { zh: "全面建成小康社会目标实现。",           en: "The goal of building a moderately prosperous society has been achieved." },
+  { zh: "科技创新自立自强。",                   en: "Science and technology innovation leads to self-reliance." },
+  { zh: "北斗系统服务全球用户。",               en: "The Beidou system serves users worldwide." },
+  { zh: "5G技术引领通信新时代。",               en: "5G technology leads a new era of communication." },
+  { zh: "量子通信研究取得突破。",               en: "Quantum communication research has made breakthroughs." },
+  { zh: "芯片产业面临发展机遇。",               en: "The chip industry faces development opportunities." },
+  { zh: "生物医药产业蓬勃发展。",               en: "The biomedical industry is thriving." },
+  { zh: "航天事业取得举世瞩目成就。",           en: "Space industry has achieved remarkable accomplishments." },
+  { zh: "探月工程实现历史性突破。",             en: "The lunar exploration project achieved historic breakthroughs." },
+  { zh: "火星探测任务圆满成功。",               en: "The Mars exploration mission was a complete success." },
+  { zh: "深海潜水器创下新纪录。",               en: "The deep-sea submersible set a new record." },
+  { zh: "极地科考贡献中国智慧。",               en: "Polar scientific research contributes Chinese wisdom." },
+  { zh: "可再生能源利用率不断提高。",           en: "The utilization rate of renewable energy is continuously improving." },
+  { zh: "碳中和目标彰显大国担当。",             en: "The carbon neutrality goal demonstrates great nation's responsibility." },
+  { zh: "生态文明建设任重道远。",               en: "Ecological civilization construction has a long way to go." },
+  { zh: "绿色发展理念深入人心。",               en: "The concept of green development is deeply rooted in people's hearts." },
+  { zh: "碳达峰碳中和是庄严承诺。",             en: "Carbon peak and carbon neutrality are solemn commitments." },
+  { zh: "生物多样性保护成效显著。",             en: "Biodiversity conservation has achieved remarkable results." },
+  { zh: "荒漠化治理取得积极进展。",             en: "Desertification control has made positive progress." },
+  { zh: "长江十年禁渔保护水生资源。",           en: "The ten-year fishing ban on the Yangtze River protects aquatic resources." },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 27. 雅思托福高分 (IELTS/TOEFL High Score) — 90句
+  // ═══════════════════════════════════════════════════════════════
+  { zh: "我完全同意这个观点。",                 en: "I strongly agree with this viewpoint." },
+  { zh: "从某种意义上说，你是对的。",         en: "In a sense, you are right." },
+  { zh: "这引发了一个有趣的讨论。",             en: "This sparks an interesting discussion." },
+  { zh: "值得注意的是，这个问题很复杂。",       en: "It's worth noting that this issue is complex." },
+  { zh: "我认为这个解决方案有利有弊。",         en: "I think this solution has pros and cons." },
+  { zh: "支持这个观点的主要论据是什么？",       en: "What are the main arguments supporting this viewpoint?" },
+  { zh: "让我们来探讨这个现象背后的原因。",     en: "Let's explore the reasons behind this phenomenon." },
+  { zh: "这可以从多个角度来分析。",             en: "This can be analyzed from multiple perspectives." },
+  { zh: "一方面...另一方面...",                 en: "On one hand... on the other hand..." },
+  { zh: "考虑到目前的证据，我认为...",         en: "Given the current evidence, I believe..." },
+  { zh: "这一趋势可能会持续下去。",             en: "This trend is likely to continue." },
+  { zh: "有证据表明情况正在改善。",             en: "There is evidence that the situation is improving." },
+  { zh: "这一政策产生了深远的影响。",           en: "This policy has had a far-reaching impact." },
+  { zh: "我们需要权衡利弊。",                   en: "We need to weigh the advantages and disadvantages." },
+  { zh: "造成这个问题的主要因素是什么？",       en: "What are the main factors contributing to this problem?" },
+  { zh: "在当今社会，...已成为普遍现象。",     en: "In today's society, ... has become a common phenomenon." },
+  { zh: "人们对此持有不同的看法。",             en: "People hold different views on this." },
+  { zh: "我倾向于支持第一种观点。",             en: "I tend to support the first viewpoint." },
+  { zh: "尽管存在争议，但总体趋势是积极的。",   en: "Despite the controversy, the overall trend is positive." },
+  { zh: "我认为关键在于找到平衡点。",           en: "I think the key lies in finding a balance." },
+  { zh: "这对社会发展提出了新的挑战。",         en: "This poses new challenges for social development." },
+  { zh: "科学技术的发展日新月异。",             en: "The development of science and technology is changing rapidly." },
+  { zh: "我们应该采取积极的态度。",               en: "We should take a proactive attitude." },
+  { zh: "环境问题引起了全世界的关注。",         en: "Environmental issues have attracted worldwide attention." },
+  { zh: "经济增长与环境保??需要协调发展。",    en: "Economic growth and environmental protection need coordinated development." },
+  { zh: "教育是国家发展的基石。",               en: "Education is the cornerstone of national development." },
+  { zh: "终身学习已成为时代的要求。",           en: "Lifelong learning has become a requirement of the times." },
+  { zh: "教育公平是社会公平的重要体现。",       en: "Educational equity is an important manifestation of social equity." },
+  { zh: "互联网改变了传统的教学模式。",         en: "The internet has changed traditional teaching methods." },
+  { zh: "在线学习提供了更多的可能性。",         en: "Online learning provides more possibilities." },
+  { zh: "虚拟现实技术将广泛应用于教育领域。",   en: "Virtual reality technology will be widely applied in education." },
+  { zh: "个性化学习是未来教育的趋势。",         en: "Personalized learning is the trend of future education." },
+  { zh: "批判性思维能力的培养至关重要。",       en: "The cultivation of critical thinking ability is crucial." },
+  { zh: "创新能力是21世纪的核心竞争力。",       en: "Innovation capability is the core competitiveness of the 21st century." },
+  { zh: "跨学科研究越来越受到重视。",           en: "Interdisciplinary research is receiving increasing attention." },
+  { zh: "国际合作促进了科技发展。",             en: "International cooperation promotes scientific development." },
+  { zh: "文化交流增进了各国人民的友谊。",       en: "Cultural exchange enhances friendship among people of different countries." },
+  { zh: "多元文化社会需要包容和理解。",         en: "A multicultural society requires tolerance and understanding." },
+  { zh: "文化遗产是全人类的共同财富。",         en: "Cultural heritage is the common wealth of all humanity." },
+  { zh: "旅游业促进了经济发展和文化交流。",     en: "Tourism promotes economic development and cultural exchange." },
+  { zh: "文化遗产保护面临诸多挑战。",           en: "Cultural heritage preservation faces many challenges." },
+  { zh: "全球化进程加速了文化融合。",           en: "The process of globalization has accelerated cultural integration." },
+  { zh: "本土文化需要得到传承和发展。",         en: "Local culture needs to be inherited and developed." },
+  { zh: "饮食文化是文化多样性的重要组成部分。", en: "Food culture is an important part of cultural diversity." },
+  { zh: "传统手工艺面临着失传的危险。",         en: "Traditional crafts are at risk of being lost." },
+  { zh: "传统节日承载着深厚的文化内涵。",       en: "Traditional festivals carry profound cultural connotations." },
+  { zh: "艺术教育有助于培养审美能力。",         en: "Arts education helps cultivate aesthetic ability." },
+  { zh: "音乐可以跨越语言的障碍。",             en: "Music can transcend language barriers." },
+  { zh: "电影是了解不同文化的重要窗口。",       en: "Films are an important window to understand different cultures." },
+  { zh: "文学作品的翻译促进了文化交流。",       en: "The translation of literary works promotes cultural exchange." },
+  { zh: "体育运动具有增进友谊的作用。",         en: "Sports have the effect of enhancing friendship." },
+  { zh: "奥林匹克精神激励着全世界人民。",       en: "The Olympic spirit inspires people all over the world." },
+  { zh: "健康的生活方式包括合理的饮食和运动。", en: "A healthy lifestyle includes balanced diet and exercise." },
+  { zh: "心理健康与身体健康同等重要。",         en: "Mental health is as important as physical health." },
+  { zh: "医疗技术的进步延长了人类的寿命。",     en: "Advances in medical technology have extended human lifespan." },
+  { zh: "预防医学越来越受到重视。",             en: "Preventive medicine is receiving increasing attention." },
+  { zh: "全民健身计划正在深入实施。",           en: "The national fitness program is being implemented." },
+  { zh: "老年人口的增加带来了新的社会问题。",   en: "The increasing elderly population has brought new social problems." },
+  { zh: "人口老龄化对社会保障体系提出挑战。", en: "Population aging poses challenges to the social security system." },
+  { zh: "城市化进程改变了人们的生活方??。",   en: "The urbanization process has changed people's way of life." },
+  { zh: "城市交通拥堵问题亟待解决。",           en: "Urban traffic congestion needs to be solved urgently." },
+  { zh: "智慧城市建设改善了居民生活。",         en: "Smart city construction has improved residents' lives." },
+  { zh: "公共交通是解决出行问题的重要途径。",   en: "Public transportation is an important way to solve travel problems." },
+  { zh: " renewable energy development is crucial for sustainable future.", "en": "可再生能源发展对可持续未来至关重要。" },
+  { zh: "气候变化是当今世界面临的严峻挑战。",   en: "Climate change is a serious challenge facing the world today." },
+  { zh: "温室气体排放需要大幅减少。",           en: "Greenhouse gas emissions need to be significantly reduced." },
+  { zh: "海洋污染威胁着海洋生态系统的平衡。",   en: "Marine pollution threatens the balance of marine ecosystems." },
+  { zh: "野生动物保护刻不容缓。",               en: "Wildlife protection is urgent." },
+  { zh: "森林被称为地球之肺。",                 en: "Forests are called the lungs of the earth." },
+  { zh: "水资源短缺已成为全球性问题。",         en: "Water resource shortage has become a global issue." },
+  { zh: "节约用水是每个人的责任。",             en: "Saving water is everyone's responsibility." },
+  { zh: "垃圾分类可以有效减少环境污染。",       en: "Waste classification can effectively reduce environmental pollution." },
+  { zh: "可持续发展是实现经济与环境双赢的途径。", en: "Sustainable development is a way to achieve economic and environmental win-win." },
+  { zh: "循环经济理念正在被广泛接受。",         en: "The concept of circular economy is being widely accepted." },
+  { zh: "清洁能源的使用可以减少空气污染。",     en: "The use of clean energy can reduce air pollution." },
+  { zh: "电动汽车有助于减少碳排放。",           en: "Electric vehicles help reduce carbon emissions." },
+  { zh: "绿色建筑是建筑业发展的方向。",         en: "Green buildings are the direction of construction industry development." },
+  { zh: "有机农业有助于保护土壤健康。",         en: "Organic agriculture helps protect soil health." },
+  { zh: "农药和化肥的过度使用造成土壤退化。",   en: "The overuse of pesticides and fertilizers causes soil degradation." },
+  { zh: "推广公共交通可以缓解交通拥堵和污染。", en: "Promoting public transport can alleviate traffic congestion and pollution." },
+  { zh: "自行车道鼓励绿色出行。",               en: "Bike lanes encourage green travel." },
+  { zh: "城市规划应考虑居民的生活质量。",       en: "Urban planning should consider residents' quality of life." },
+  { zh: "社交媒体改变了人们的沟通方式。",       en: "Social media has changed the way people communicate." },
+  { zh: "人工智能正在重塑各行各业。",           en: "Artificial intelligence is reshaping various industries." },
+  { zh: "大数据分析为决策提供了依据。",         en: "Big data analysis provides a basis for decision-making." },
+  { zh: "云计算改变了传统的计算模式。",         en: "Cloud computing has changed traditional computing models." },
+  { zh: "物联网让万物互联成为可能。",           en: "The Internet of Things makes interconnection of all things possible." },
+  { zh: "区块链技术具有广阔的应用前景。",       en: "Blockchain technology has broad application prospects." },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 28. 母语者日常 (Native Speaker Daily) — 120句
+  // ═══════════════════════════════════════════════════════════════
+  { zh: "我被这件事搞糊涂了。",                 en: "I'm completely confused by this." },
+  { zh: "这真是太巧了！",                       en: "What a coincidence!" },
+  { zh: "你真是帮了大忙！",                     en: "You've been a huge help!" },
+  { zh: "那真是个馊主意。",                     en: "That was a really bad idea." },
+  { zh: "我有点不对劲。",                       en: "I'm feeling a bit off." },
+  { zh: "今天真是倒霉的一天。",                 en: "Today has been a rough day." },
+  { zh: "这绝对是个双赢的局面。",               en: "This is definitely a win-win situation." },
+  { zh: "我们先别急着下结论。",                 en: "Let's not jump to conclusions." },
+  { zh: "情况可能会更糟。",                     en: "Things could be worse." },
+  { zh: "我就是没那个运气。",                   en: "I just don't have the luck." },
+  { zh: "我完全同意你的看法。",                 en: "I'm totally on the same page as you." },
+  { zh: "这太让我意外了！",                     en: "This blew my mind!" },
+  { zh: "别往心里去。",                         en: "Don't take it to heart." },
+  { zh: "事情没有那么简单。",                   en: "It's not that simple." },
+  { zh: "凡事都有例外。",                       en: "There are always exceptions to every rule." },
+  { zh: "这完全在我意料之中。",                 en: "This is exactly what I expected." },
+  { zh: "我需要透透气。",                       en: "I need to get some fresh air." },
+  { zh: "这真是太搞笑了！",                     en: "This is hilarious!" },
+  { zh: "我承认这是我的错。",                   en: "I'll admit that's on me." },
+  { zh: "别把事情闹大了。",                     en: "Let's not make a big deal out of this." },
+  { zh: "这件事值得深思。",                     en: "This is worth thinking about." },
+  { zh: "我觉得没什么大不了的。",               en: "I don't think it's a big deal." },
+  { zh: "真相终究会大白。",                     en: "The truth will come out eventually." },
+  { zh: "我不想自找麻烦。",                     en: "I don't want to invite trouble." },
+  { zh: "我觉得这很可疑。",                     en: "Something seems fishy to me." },
+  { zh: "这真是破天荒头一遭。",                 en: "This is a first!" },
+  { zh: "我需要理清思路。",                     en: "I need to get my thoughts straight." },
+  { zh: "让我们言归正传。",                     en: "Let's get back on track." },
+  { zh: "这完全没必要。",                       en: "This is completely unnecessary." },
+  { zh: "我只是随口说说。",                     en: "I was just making small talk." },
+  { zh: "这确实是个好主意。",                   en: "That was a stroke of genius." },
+  { zh: "我一时冲动做了这件事。",               en: "I did this on impulse." },
+  { zh: "我得好好想想。",                       en: "I need to sleep on it." },
+  { zh: "这让我陷入了两难境地。",               en: "This puts me in a tough spot." },
+  { zh: "我不想欠你人情。",                     en: "I don't want to owe you one." },
+  { zh: "你真是太贴心了！",                     en: "You're so thoughtful!" },
+  { zh: "这件事让我很为难。",                   en: "This puts me in an awkward position." },
+  { zh: "我们得随机应变。",                     en: "We need to play it by ear." },
+  { zh: "这只是个时间问题。",                   en: "It's only a matter of time." },
+  { zh: "别把话说死了。",                       en: "Don't make any promises you can't keep." },
+  { zh: "这件事我心里有数。",                   en: "I have a pretty good idea about this." },
+  { zh: "我看这事悬。",                         en: "I think this is a long shot." },
+  { zh: "这真是出人意料。",                     en: "This came out of left field." },
+  { zh: "我们扯平了。",                         en: "We're even now." },
+  { zh: "这事我拿不准。",                       en: "I'm not sure about this." },
+  { zh: "你别拐弯抹角了。",                     en: "Just cut to the chase." },
+  { zh: "这完全是胡说八道。",                   en: "This is complete nonsense." },
+  { zh: "你太夸张了。",                         en: "You're exaggerating." },
+  { zh: "这简直是废话。",                       en: "This is beside the point." },
+  { zh: "我看这事没什么希望。",                 en: "I don't see this working out." },
+  { zh: "这真是天意啊。",                       en: "This must be fate." },
+  { zh: "你误会我的意思了。",                   en: "You misunderstood me." },
+  { zh: "别把我的话当真。",                     en: "Don't take me seriously." },
+  { zh: "这事交给我来处理。",                   en: "Leave this to me." },
+  { zh: "我一时想不起来。",                     en: "It's on the tip of my tongue." },
+  { zh: "这真是个难题。",                       en: "This is a tough nut to crack." },
+  { zh: "我们换个话题吧。",                     en: "Let's change the subject." },
+  { zh: "这件事不归我管。",                     en: "This is outside my jurisdiction." },
+  { zh: "我看这事没戏了。",                     en: "I think this is going nowhere." },
+  { zh: "我需要你的帮助。",                     en: "I need you to back me up." },
+  { zh: "这真是雪中送炭啊！",                   en: "This is just what I needed!" },
+  { zh: "你别得寸进尺。",                       en: "Don't push your luck." },
+  { zh: "这真是屋漏偏逢连夜雨。",               en: "It never rains but it pours." },
+  { zh: "我看这事稳了。",                       en: "This is a sure thing." },
+  { zh: "你真有两下子！",                       en: "You're really something!" },
+  { zh: "我看这事要黄。",                       en: "I see this falling through." },
+  { zh: "这真是竹篮打水一场空。",               en: "This is a waste of effort." },
+  { zh: "我看这事板上钉钉了。",                 en: "This is as good as done." },
+  { zh: "你这人真不靠谱。",                     en: "You're really unreliable." },
+  { zh: "我看这事没门。",                       en: "I don't think there's a snowball's chance in hell." },
+  { zh: "这事我做不了主。",                     en: "This is above my pay grade." },
+  { zh: "这真是赔了夫人又折兵。",               en: "This is doubly bad for you." },
+  { zh: "你给我等着！",                         en: "Just you wait!" },
+  { zh: "我看这事有点悬。",                     en: "This is touch and go." },
+  { zh: "我们好好谈谈。",                       en: "Let's have a heart-to-heart talk." },
+  { zh: "我看这事八九不离十了。",               en: "This is a safe bet." },
+  { zh: "这真是让人头疼。",                     en: "This is a real headache." },
+  { zh: "你别哪壶不开提哪壶。",                 en: "Don't bring up sore subjects." },
+  { zh: "我看这事有点门。",                     en: "I think there's something to this." },
+  { zh: "我们走着瞧。",                         en: "Only time will tell." },
+  { zh: "这真是见鬼了。",                       en: "This is beyond belief." },
+  { zh: "你别火上浇油了。",                     en: "Don't add fuel to the fire." },
+  { zh: "我看这事问题不大。",                   en: "I think this is a minor issue." },
+  { zh: "这真是哑巴吃黄连，有苦说不出。",      en: "There's no way to explain how bad this is." },
+  { zh: "你别哪根筋不对了。",                   en: "What's gotten into you?" },
+  { zh: "这事我记下了。",                       en: "I'll keep this in mind." },
+  { zh: "这真是晴天霹雳。",                     en: "This came completely out of the blue." },
+  { zh: "你别借题发挥了。",                     en: "Don't read too much into this." },
+  { zh: "我看这事好办。",                       en: "I think this is easily handled." },
+  { zh: "这真是自讨苦吃。",                     en: "You asked for this." },
+  { zh: "你别强人所难了。",                     en: "Don't ask the impossible." },
+  { zh: "我看这事难办。",                       en: "I think this is a tall order." },
+  { zh: "这真是好心没好报。",                   en: "No good deed goes unpunished." },
+  { zh: "你别节外生枝了。",                     en: "Don't complicate things unnecessarily." },
+  { zh: "我看这事得从长计议。",                 en: "I think we need to think this over carefully." },
+  { zh: "这真是偷鸡不成蚀把米。",               en: "This backfired on you." },
+  { zh: "你别得理不饶人了。",                   en: "Don't rub it in." },
+  { zh: "我看这事就这么定了。",                 en: "I think this is settled." },
+  { zh: "这真是赶鸭子上架。",                   en: "This is like pulling teeth." },
+  { zh: "你别存心跟我过不去。",                 en: "Don't make things difficult for me on purpose." },
+  { zh: "我看这事另有蹊跷。",                   en: "I think there's more to this than meets the eye." },
+  { zh: "这真是搬起石头砸自己的脚。",           en: "This is shooting yourself in the foot." },
+  { zh: "你别打肿脸充胖子了。",                 en: "Don't bite off more than you can chew." },
+  { zh: "我看这事非你莫属。",                   en: "You're the only one for this job." },
+  { zh: "这真是强中更有强中手。",               en: "There's always someone better." },
+  { zh: "你别往枪口上撞。",                     en: "Don't push your luck." },
+  { zh: "我看这事非办不可。",                   en: "This is a must-do." },
+  { zh: "这真是癞蛤蟆想吃天鹅肉。",             en: "This is wishful thinking." },
+  { zh: "你别眉毛胡子一把抓。",                 en: "Don't try to do everything at once." },
+  { zh: "我看这事手到擒来。",                   en: "This is a piece of cake for you." },
+  { zh: "这真是铁杵能磨成针。",                 en: "Where there's a will, there's a way." },
+  { zh: "你别舍本逐末了。",                     en: "Don't lose sight of what really matters." },
+  { zh: "我看这事水到渠成。",                   en: "This is a natural progression." },
+  { zh: "这真是光阴似箭，日月如梭。",           en: "Time flies." },
+  { zh: "你别画蛇添足了。",                     en: "Don't overdo it." },
+  { zh: "我看这事指日可待。",                   en: "This is just around the corner." },
+  { zh: "这真是人算不如天算。",                 en: "Man proposes, God disposes." },
+  { zh: "你别杞人忧天了。",                     en: "Don't worry about things that may never happen." },
+  { zh: "我看这事十拿九稳。",                   en: "This is a sure bet." },
+  { zh: "这真是山重水复疑无路，柳暗花明又一村。", en: "Every cloud has a silver lining." },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 29. 职场英语 (Workplace English) — 60句
+  // ═══════════════════════════════════════════════════════════════
+  { zh: "我们先碰个头吧。",                     en: "Let's touch base first." },
+  { zh: "这个项目的截止日期是哪天？",           en: "When is the deadline for this project?" },
+  { zh: "我需要和您确认一下这个方案。",         en: "I need to confirm this plan with you." },
+  { zh: "能帮我看一下这份报告吗？",             en: "Could you take a look at this report?" },
+  { zh: "我认为这个方案需要改进。",             en: "I think this proposal needs some refinement." },
+  { zh: "我们先把任务分工一下吧。",             en: "Let's divide up the tasks first." },
+  { zh: "我觉得这个想法值得探讨。",             en: "I think this idea is worth exploring." },
+  { zh: "我们需要控制成本。",                   en: "We need to keep costs under control." },
+  { zh: "这个月的销售业绩不错。",               en: "Sales have been good this month." },
+  { zh: "我能借用一下您的想法吗？",             en: "Can I bounce some ideas off you?" },
+  { zh: "我认为我们应该三思而后行。",           en: "I think we should think twice before acting." },
+  { zh: "这件事需要上报给领导。",               en: "This needs to be escalated to management." },
+  { zh: "我们先把预算做出来。",                 en: "Let's put together a budget first." },
+  { zh: "我觉得这个方案可行。",                 en: "I think this plan is feasible." },
+  { zh: "我们需要开个紧急会议。",               en: "We need to have an urgent meeting." },
+  { zh: "这个月的KPI完成得怎么样？",             en: "How are the KPIs looking this month?" },
+  { zh: "我觉得我们应该做好两手准备。",         en: "I think we should be prepared for both outcomes." },
+  { zh: "这件事需要您来定夺。",                 en: "This requires your decision." },
+  { zh: "我能跟您约个时间单独聊聊吗？",         en: "Can I schedule a one-on-one with you?" },
+  { zh: "我认为我们应该先试点。",               en: "I think we should run a pilot first." },
+  { zh: "这个方案的风险太大了。",               en: "This proposal carries too much risk." },
+  { zh: "我们需要权衡利弊。",                   en: "We need to weigh the pros and cons." },
+  { zh: "我觉得我们可以双赢。",                 en: "I think we can find a win-win solution." },
+  { zh: "这件事进展如何了？",                   en: "How is this coming along?" },
+  { zh: "我们需要加快进度了。",                 en: "We need to step on the gas." },
+  { zh: "我觉得我们需要改变策略。",             en: "I think we need to change our strategy." },
+  { zh: "这件事有回旋的余地吗？",               en: "Is there any wiggle room on this?" },
+  { zh: "我们需要保持沟通顺畅。",               en: "We need to keep the lines of communication open." },
+  { zh: "我觉得我们应该虚心接受批评。",         en: "I think we should take criticism constructively." },
+  { zh: "这件事我会跟进处理的。",               en: "I'll follow up on this." },
+  { zh: "我们需要按时交付。",                   en: "We need to deliver on time." },
+  { zh: "我觉得我们需要一个备选方案。",       en: "I think we need a backup plan." },
+  { zh: "这件事我可以全权负责。",               en: "I can take full responsibility for this." },
+  { zh: "我们需要团队协作。",                   en: "We need to work as a team." },
+  { zh: "我觉得您的建议很有价值。",             en: "I think your suggestion is very valuable." },
+  { zh: "这件事恐怕有困难。",                   en: "I'm afraid this will be challenging." },
+  { zh: "我们需要提升客户满意度。",             en: "We need to improve customer satisfaction." },
+  { zh: "我觉得我们应该着眼长远。",             en: "I think we should think long-term." },
+  { zh: "这件事就这么定了。",                   en: "It's settled then." },
+  { zh: "我们需要提高工作效率。",               en: "We need to improve efficiency." },
+  { zh: "我觉得我们应该稳扎稳打。",             en: "I think we should proceed step by step." },
+  { zh: "这件事请放心交给我。",                 en: "Please rest assured this is in good hands." },
+  { zh: "我们需要发挥每个人的优势。",           en: "We need to leverage everyone's strengths." },
+  { zh: "我觉得我们可以借鉴一下经验。",         en: "I think we can learn from experience." },
+  { zh: "这件事需要您首肯。",                   en: "This requires your approval." },
+  { zh: "我们需要适应变化。",                   en: "We need to adapt to change." },
+  { zh: "我觉得我们应该有担当。",               en: "I think we should step up to the plate." },
+  { zh: "这件事我心里有数。",                   en: "I know exactly what to do." },
+  { zh: "我们需要未雨绸缪。",                   en: "We need to be proactive." },
+  { zh: "我觉得我们应该敢想敢做。",             en: "I think we should dream big and act boldly." },
+  { zh: "这件事成败在此一举。",                 en: "This is make-or-break." },
+  { zh: "我们需要提高执行力。",                   en: "We need to strengthen execution." },
+  { zh: "我觉得我们应该同心协力。",             en: "I think we should work together as one." },
+  { zh: "这件事需要群策群力。",                 en: "This requires everyone's input." },
+  { zh: "我们需要直面挑战。",                   en: "We need to face challenges head-on." },
+  { zh: "我觉得我们应该开拓创新。",             en: "I think we should innovate." },
+  { zh: "这件事一定能办成。",                   en: "This is definitely achievable." },
+  { zh: "我们需要精益求精。",                   en: "We need to strive for excellence." },
+  { zh: "我觉得我们应该志存高远。",             en: "I think we should aim high." },
+  { zh: "这件事前途无量。",                     en: "This has great potential." },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 30. 情感表达 (Emotional Expressions) — 50句
+  // ═══════════════════════════════════════════════════════════════
+  { zh: "我感到非常开心。",                     en: "I'm over the moon about this." },
+  { zh: "这让我感到很难过。",                   en: "This really tugs at my heartstrings." },
+  { zh: "我对你感到失望。",                     en: "I'm disappointed in you." },
+  { zh: "这真让我感到欣慰。",                   en: "This is a weight off my shoulders." },
+  { zh: "我感到有些担心。",                     en: "I have a sinking feeling about this." },
+  { zh: "这让我感到既惊讶又高兴。",             en: "This is a pleasant surprise." },
+  { zh: "我感到非常感激。",                     en: "I can't thank you enough." },
+  { zh: "这真让我心碎。",                       en: "This breaks my heart." },
+  { zh: "我感到非常骄傲。",                     en: "I'm bursting with pride." },
+  { zh: "这让我感到压力很大。",                 en: "This is weighing heavily on my mind." },
+  { zh: "我感到非常兴奋。",                     en: "I'm pumped up about this!" },
+  { zh: "这让我感到忐忑不安。",                 en: "I'm on pins and needles." },
+  { zh: "我感到非常放松。",                     en: "I'm as cool as a cucumber." },
+  { zh: "这让我感到受宠若惊。",                 en: "I'm deeply honored." },
+  { zh: "我感到非常紧张。",                     en: "I'm a bundle of nerves." },
+  { zh: "这让我感到心潮澎湃。",                 en: "This makes my heart race." },
+  { zh: "我感到非常内疚。",                     en: "I have a guilty conscience." },
+  { zh: "这让我感到义愤填膺。",                 en: "This makes my blood boil." },
+  { zh: "我感到非常满足。",                     en: "I'm content with this." },
+  { zh: "这让我感到五味杂陈。",                 en: "This is a mixed bag of emotions." },
+  { zh: "我感到非常羡慕。",                     en: "I'm green with envy." },
+  { zh: "这让我感到如释重负。",                 en: "This is a huge relief." },
+  { zh: "我感到非常孤独。",                     en: "I'm feeling a bit lost." },
+  { zh: "这让我感到感同身受。",                 en: "I can really empathize with this." },
+  { zh: "我感到非常幸福。",                     en: "I'm on cloud nine." },
+  { zh: "这让我感到坐立不安。",                 en: "I can't sit still." },
+  { zh: "我感到非常遗憾。",                     en: "I feel a sense of regret." },
+  { zh: "这让我感到耳目一新。",                 en: "This is a breath of fresh air." },
+  { zh: "我感到非常迷茫。",                     en: "I'm at a crossroads." },
+  { zh: "这让我感到充满希望。",                 en: "This fills me with hope." },
+  { zh: "我感到非常纠结。",                     en: "I'm torn between two choices." },
+  { zh: "这让我感到茅塞顿开。",                 en: "This is a real eye-opener." },
+  { zh: "我感到非常无奈。",                     en: "I feel helpless." },
+  { zh: "这让我感到心旷神怡。",                 en: "This makes my heart sing." },
+  { zh: "我感到非常惭愧。",                     en: "I'm ashamed of myself." },
+  { zh: "这让我感到相见恨晚。",                 en: "I wish I had known this sooner." },
+  { zh: "我感到非常害怕。",                     en: "I'm scared out of my wits." },
+  { zh: "这让我感到勇气倍增。",                 en: "This gives me courage." },
+  { zh: "我感到非常愤怒。",                     en: "I'm boiling mad." },
+  { zh: "这让我感到温暖如春。",                 en: "This warms my heart." },
+  { zh: "我感到非常释然。",                     en: "I feel at peace now." },
+  { zh: "这让我感到大跌眼镜。",                 en: "This is jaw-dropping." },
+  { zh: "我感到非常感动。",                     en: "I'm deeply moved." },
+  { zh: "这让我感到爱不释手。",                 en: "I can't put this down." },
+  { zh: "我感到非常心酸。",                     en: "My heart aches." },
+  { zh: "这让我感到爱莫能助。",                 en: "I wish I could help." },
+  { zh: "我感到非常纠结。",                     en: "I'm torn apart by this." },
+  { zh: "这让我感到相见恨晚。",                 en: "I feel like I discovered this too late." },
+  { zh: "我感到非常失落。",                     en: "I feel empty inside." },
+  { zh: "这让我感到焕然一新。",                 en: "I feel like a new person." },
+
+  // ═══════════════════════════════════════════════════════════════
+  // 31. 生活技能 (Life Skills) — 40句
+  // ═══════════════════════════════════════════════════════════════
+  { zh: "我想学习烹饪。",                       en: "I want to learn how to cook." },
+  { zh: "这道菜需要什么配料？",                 en: "What ingredients do I need for this dish?" },
+  { zh: "我正在学开车。",                       en: "I'm learning to drive." },
+  { zh: "这本说明书上写的什么？",               en: "What does this manual say?" },
+  { zh: "我想办一张健身卡。",                   en: "I want to sign up for a gym membership." },
+  { zh: "这个APP怎么使用？",                   en: "How do I use this app?" },
+  { zh: "我想学会时间管理。",                   en: "I want to master time management." },
+  { zh: "这个柜子怎么组装？",                   en: "How do I assemble this cabinet?" },
+  { zh: "我想培养一个新爱好。",                 en: "I want to pick up a new hobby." },
+  { zh: "这张照片怎么拍出来的？",               en: "How did they take this photo?" },
+  { zh: "我想学会游泳。",                       en: "I want to learn how to swim." },
+  { zh: "这个程序出了什么问题？",               en: "What's wrong with this program?" },
+  { zh: "我想学一门新技能。",                   en: "I want to acquire a new skill." },
+  { zh: "这个电路怎么连接？",                   en: "How do I wire this circuit?" },
+  { zh: "我想学会理财。",                       en: "I want to learn financial literacy." },
+  { zh: "这个植物需要怎么养护？",               en: "How do I care for this plant?" },
+  { zh: "我想学做预算。",                       en: "I want to learn how to budget." },
+  { zh: "这个密码怎么设置才安全？",             en: "How do I set up a secure password?" },
+  { zh: "我想学会做演讲。",                     en: "I want to learn public speaking." },
+  { zh: "这个视频是怎么剪辑的？",               en: "How was this video edited?" },
+  { zh: "我想学一门外语。",                     en: "I want to learn a foreign language." },
+  { zh: "这个数据怎么备份？",                   en: "How do I back up this data?" },
+  { zh: "我想学会写作。",                       en: "I want to develop my writing skills." },
+  { zh: "这个家具怎么搬运？",                   en: "How do I move this furniture?" },
+  { zh: "我想学急救知识。",                     en: "I want to learn first aid." },
+  { zh: "这个房间怎么布置？",                   en: "How should I decorate this room?" },
+  { zh: "我想学会有效沟通。",                   en: "I want to learn effective communication." },
+  { zh: "这个文件怎么打印？",                   en: "How do I print this document?" },
+  { zh: "我想学会情绪管理。",                   en: "I want to learn emotional intelligence." },
+  { zh: "这个锅怎么开锅？",                     en: "How do I season this pan?" },
+  { zh: "我想学会谈判技巧。",                   en: "I want to learn negotiation skills." },
+  { zh: "这个 Wi-Fi 怎么连接？",                en: "How do I connect to this Wi-Fi?" },
+  { zh: "我想学会批判性思维。",                 en: "I want to learn critical thinking." },
+  { zh: "这个保险怎么理赔？",                   en: "How do I file an insurance claim?" },
+  { zh: "我想学项目管理。",                     en: "I want to learn project management." },
+  { zh: "这个水龙头漏水了怎么办？",             en: "What should I do about this leaking faucet?" },
+  { zh: "我想学会压力管理。",                   en: "I want to learn stress management." },
+  { zh: "这个合同需要注意什么？",               en: "What should I look out for in this contract?" },
+  { zh: "我想学会做笔记。",                     en: "I want to learn note-taking strategies." },
+  { zh: "这个盆栽怎么浇水？",                   en: "How often should I water this potted plant?" },
+];
+
+const SESSION_SIZE = 10; // 每轮随机抽取题目数
+
+/* ============================================================
+   每日打卡（localStorage）
+============================================================ */
+const CHECKIN_KEY = 'spelling_checkin';
+
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function loadCheckin() {
+  try { return JSON.parse(localStorage.getItem(CHECKIN_KEY)) || { streak: 0, lastDate: '', history: [] }; }
+  catch(e) { return { streak: 0, lastDate: '', history: [] }; }
+}
+
+function saveCheckin(data) {
+  localStorage.setItem(CHECKIN_KEY, JSON.stringify(data));
+}
+
+function renderCheckin() {
+  const data = loadCheckin();
+  const today = todayStr();
+  const alreadyDone = data.lastDate === today;
+
+  const checkinTitle = document.getElementById('checkinTitle');
+  const checkinSub   = document.getElementById('checkinSub');
+  const checkinBtn   = document.getElementById('checkinBtn');
+
+  checkinTitle.textContent = `🔥 连续打卡 ${data.streak} 天`;
+  checkinSub.textContent   = alreadyDone
+    ? `今日已打卡 ✓  下次打卡：明天`
+    : `完成本轮练习后自动打卡`;
+
+  checkinBtn.textContent = alreadyDone ? '✅ 已打卡' : '待打卡';
+  checkinBtn.className   = alreadyDone ? 'checkin-btn done' : 'checkin-btn';
+
+  // 显示最近7天点位
+  const dots = document.getElementById('streakDots');
+  dots.innerHTML = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dot = document.createElement('div');
+    if (ds === today && alreadyDone) dot.className = 'streak-dot today';
+    else if (data.history && data.history.includes(ds)) dot.className = 'streak-dot active';
+    else dot.className = 'streak-dot';
+    dots.appendChild(dot);
+  }
+}
+
+function doCheckin() {
+  // 点击横幅：仅在未完成时给提示，完成后由 showCompletion 触发
+  const data = loadCheckin();
+  const today = todayStr();
+  if (data.lastDate === today) return; // 已打卡，无操作
+  showFeedback('error', '📅', '完成本轮练习后将自动为你打卡！');
+}
+
+function performCheckin() {
+  const data  = loadCheckin();
+  const today = todayStr();
+  if (data.lastDate === today) return data; // 幂等
+
+  const yesterday = (() => {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  })();
+
+  data.streak   = (data.lastDate === yesterday) ? data.streak + 1 : 1;
+  data.lastDate = today;
+  data.history  = data.history || [];
+  if (!data.history.includes(today)) data.history.push(today);
+  // 只保留最近 60 天记录
+  data.history = data.history.slice(-60);
+
+  saveCheckin(data);
+  renderCheckin();
+  return data;
+}
+
+/* ============================================================
+   随机出题 + 错题权重
+============================================================ */
+// wrongPool: { questionIndex -> failCount }
+let wrongPool = {};
+
+function buildSessionQueue() {
+  // 打乱全题库
+  const indices = Array.from({ length: ALL_QUESTIONS.length }, (_, i) => i);
+  shuffle(indices);
+
+  // 先抽 SESSION_SIZE 道，错题池里的题额外权重（出现2次机会）
+  const wrongIndices = Object.keys(wrongPool).map(Number)
+    .filter(i => wrongPool[i] > 0)
+    .sort((a, b) => wrongPool[b] - wrongPool[a]); // 错得越多越靠前
+
+  // 从错题池里取最多 ceil(SESSION_SIZE/3) 道
+  const retryCount = Math.min(wrongIndices.length, Math.ceil(SESSION_SIZE / 3));
+  const retryPick  = wrongIndices.slice(0, retryCount);
+
+  // 从非错题里随机补齐
+  const freshPool = indices.filter(i => !retryPick.includes(i));
+  const freshPick = freshPool.slice(0, SESSION_SIZE - retryPick.length);
+
+  // 合并 & 打乱
+  const combined = [...retryPick, ...freshPick];
+  shuffle(combined);
+  return combined; // indices数组
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/* ============================================================
+   游戏状态
+============================================================ */
+let sessionQueue  = [];   // 本轮题目 index 数组
+let sessionPos    = 0;    // 当前在 sessionQueue 中的位置
+let correctCount  = 0;
+let wrongCount    = 0;
+let streak        = 0;
+let maxStreak     = 0;
+let waitingNext   = false;
+let currentIsRetry = false;
+
+function currentQ() { return ALL_QUESTIONS[sessionQueue[sessionPos]]; }
+
+/* ============================================================
+   DOM refs
+============================================================ */
+const chineseSentenceEl = document.getElementById('chineseSentence');
+const hintTextEl        = document.getElementById('hintText');
+const spellingInput     = document.getElementById('spellingInput');
+const feedbackEl        = document.getElementById('feedback');
+const feedbackEmojiEl   = document.getElementById('feedbackEmoji');
+const feedbackTextEl    = document.getElementById('feedbackText');
+const submitBtn         = document.getElementById('submitBtn');
+const progressFill      = document.getElementById('progressFill');
+const progressCount     = document.getElementById('progressCount');
+const inputIcon         = document.getElementById('inputIcon');
+const answerReveal      = document.getElementById('answerReveal');
+const gameCard          = document.getElementById('gameCard');
+const completionScreen  = document.getElementById('completionScreen');
+const eyeBtn            = document.getElementById('eyeBtn');
+const answerBanner      = document.getElementById('answerBanner');
+const answerBannerText  = document.getElementById('answerBannerText');
+const retryTag          = document.getElementById('retryTag');
+const wrongBadge        = document.getElementById('wrongBadge');
+const wrongQueueCount   = document.getElementById('wrongQueueCount');
+
+/* ============================================================
+   加载题目（单词逐个输入模式）
+============================================================ */
+function loadQuestion() {
+  waitingNext = false;
+  const q = currentQ();
+  const origIdx = sessionQueue[sessionPos];
+  currentIsRetry = (wrongPool[origIdx] > 0);
+
+  chineseSentenceEl.textContent = q.zh;
+  hintTextEl.textContent = `共 ${q.en.length} 个字符（含标点/空格）`;
+
+  // 错题标签
+  retryTag.style.display = currentIsRetry ? 'inline-flex' : 'none';
+
+  // 显示单输入框
+  const container = document.getElementById('wordInputsContainer');
+  container.innerHTML = '';
+  const wrapper = document.getElementById('singleInputWrapper');
+  wrapper.style.display = '';
+
+  feedbackEl.className = 'feedback';
+  inputIcon.className = 'input-icon';
+  inputIcon.textContent = '';
+
+  spellingInput.value = '';
+  spellingInput.disabled = false;
+  spellingInput.className = 'spelling-input';
+  spellingInput.focus();
+
+  // 显示单词数量提示
+  const wordCount = q.en.split(' ').length;
+  hintText.textContent = `💡 共 ${wordCount} 个单词`;
+
+  answerReveal.innerHTML = '';
+  answerReveal.className = 'answer-reveal';
+
+  answerBanner.className = 'answer-banner';
+  answerBannerText.textContent = '';
+
+  eyeBtn.className = 'btn-eye';
+  eyeBtn.disabled = false;
+  answerVisible = false;
+
+  submitBtn.textContent = '✅ 确认提交';
+  waitingNext = false;
+
+  // Progress
+  const pct = (sessionPos / sessionQueue.length) * 100;
+  progressFill.style.width = pct + '%';
+  progressCount.textContent = `${sessionPos + 1} / ${sessionQueue.length}`;
+
+  // Wrong pool badge
+  const wCount = Object.values(wrongPool).filter(v => v > 0).length;
+  if (wCount > 0) {
+    wrongBadge.classList.remove('hidden');
+    wrongQueueCount.textContent = wCount;
+  } else {
+    wrongBadge.classList.add('hidden');
+  }
+}
+
+/* ============================================================
+   提交处理
+============================================================ */
+function handleSubmit() {
+  if (waitingNext) {
+    sessionPos++;
+    if (sessionPos >= sessionQueue.length) {
+      showCompletion();
+    } else {
+      loadQuestion();
+    }
+    return;
+  }
+
+  const q = currentQ();
+  const correct = q.en;
+  const userInput = spellingInput.value.trim();
+  const origIdx = sessionQueue[sessionPos];
+
+  if (!userInput) {
+    showFeedback('error', '🤔', '请先输入英文拼写！');
+    return;
+  }
+
+  // 智能匹配：忽略标点、允许缩写变体
+  if (isAnswerCorrect(userInput, correct)) {
+    // ✅ 完全正确
+    correctCount++;
+    streak++;
+    maxStreak = Math.max(maxStreak, streak);
+
+    if (wrongPool[origIdx] > 0) wrongPool[origIdx]--;
+    updateStats();
+
+    spellingInput.className = 'spelling-input correct';
+    inputIcon.className = 'input-icon visible success-icon';
+    inputIcon.textContent = '✓';
+
+    const streakMsg = streak >= 3 ? ` 🔥 ${streak}连对！` : '';
+    showFeedback('success', '🎉', `太棒了！完全正确！${streakMsg}`);
+    revealAnswer(correct);
+
+    submitBtn.textContent = sessionPos + 1 < sessionQueue.length ? '➡️ 下一题' : '🏆 查看结果';
+    waitingNext = true;
+
+    if (streak >= 3) spawnConfetti(streak >= 5 ? 60 : 30);
+
+  } else {
+    // ❌ 错误
+    wrongCount++;
+    streak = 0;
+
+    wrongPool[origIdx] = (wrongPool[origIdx] || 0) + 1;
+    updateStats();
+
+    const wCount = Object.values(wrongPool).filter(v => v > 0).length;
+    wrongBadge.classList.remove('hidden');
+    wrongQueueCount.textContent = wCount;
+
+    // 计算相似度提示
+    const sim = similarity(userInput.toLowerCase(), correct.toLowerCase());
+    let hintMsg = sim > 0.8
+      ? '🤏 只差一点点！再试一次！'
+      : sim > 0.6
+      ? '💪 还不错，继续努力！'
+      : sim > 0.3
+      ? '🤔 需要再想想哦'
+      : '❌ 完全不对，看看提示吧';
+    showFeedback('error', '😅', hintMsg);
+
+    spellingInput.className = 'spelling-input wrong';
+    inputIcon.className = 'input-icon visible error-icon';
+    inputIcon.textContent = '✗';
+
+    // 清空并聚焦，允许重试
+    setTimeout(() => {
+      spellingInput.value = '';
+      spellingInput.className = 'spelling-input';
+      inputIcon.className = 'input-icon';
+      spellingInput.focus();
+    }, 800);
+  }
+}
+
+function normalise(str) { return str.replace(/\s+/g, ' ').toLowerCase().trim(); }
+
+// 缩写扩展映射（双向）
+const contractions = {
+  "i'm": "i am", "you're": "you are", "he's": "he is", "she's": "she is",
+  "it's": "it is", "we're": "we are", "they're": "they are",
+  "i've": "i have", "you've": "you have", "we've": "we have", "they've": "they have",
+  "i'll": "i will", "you'll": "you will", "he'll": "he will", "she'll": "she will",
+  "we'll": "we will", "they'll": "they will",
+  "i'd": "i would", "you'd": "you would", "he'd": "he would", "she'd": "she would",
+  "we'd": "we would", "they'd": "they would",
+  "isn't": "is not", "aren't": "are not", "wasn't": "was not", "weren't": "were not",
+  "haven't": "have not", "hasn't": "has not", "hadn't": "had not",
+  "don't": "do not", "doesn't": "does not", "didn't": "did not",
+  "won't": "will not", "wouldn't": "would not", "can't": "cannot", "couldn't": "could not",
+  "shouldn't": "should not", "mightn't": "might not", "mustn't": "must not",
+  "let's": "let us", "that's": "that is", "what's": "what is", "who's": "who is",
+  "there's": "there is", "here's": "here is", "there's": "there is",
+  "gonna": "going to", "wanna": "want to", "gotta": "got to",
+  "ima": "i am going to", "ima": "i am going to"
+};
+
+// 移除标点符号
+function removePunctuation(str) {
+  return str.replace(/[.,!?;:'"()\[\]{}]/g, '').trim();
+}
+
+// 扩展缩写
+function expandContractions(str) {
+  let result = str.toLowerCase();
+  for (const [contraction, expansion] of Object.entries(contractions)) {
+    // 支持带撇号的缩写：i'm -> i am
+    result = result.replace(new RegExp(contraction.replace(/'/g, "'?"), 'g'), expansion);
+  }
+  return result;
+}
+
+// 智能判断答案是否正确
+function isAnswerCorrect(userInput, correctAnswer) {
+  // 1. 基本规范化：去除多余空格、转小写
+  const normUser = normalise(userInput);
+  const normCorrect = normalise(correctAnswer);
+  
+  // 2. 完全匹配（忽略大小写和空格）
+  if (normUser === normCorrect) return true;
+  
+  // 3. 去除标点后比较
+  const noPunctUser = removePunctuation(normUser);
+  const noPunctCorrect = removePunctuation(normCorrect);
+  if (noPunctUser === noPunctCorrect) return true;
+  
+  // 4. 扩展缩写后比较
+  const expandUser = expandContractions(noPunctUser);
+  const expandCorrect = expandContractions(noPunctCorrect);
+  if (expandUser === expandCorrect) return true;
+  
+  return false;
+}
+
+function buildHint(userInput, correct) {
+  const ui = normalise(userInput), ci = normalise(correct);
+  for (let i = 0; i < Math.min(ui.length, ci.length); i++) {
+    if (ui[i] !== ci[i]) return ` 提示：第 ${i + 1} 个字符有误`;
+  }
+  if (ui.length !== ci.length)
+    return ui.length < ci.length
+      ? ` 提示：内容有点短，还差 ${ci.length - ui.length} 个字符`
+      : ' 提示：内容有点长';
+  return '';
+}
+
+/* ============================================================
+   查看答案（眼睛按钮）— 点一次显示，再点一次隐藏
+============================================================ */
+let answerVisible = false;
+
+function showAnswer() {
+  if (waitingNext) return;
+
+  const correct = currentQ().en;
+  const origIdx = sessionQueue[sessionPos];
+
+  // 切换显示/隐藏
+  if (answerVisible) {
+    // 隐藏答案
+    answerBanner.className = 'answer-banner';
+    answerBannerText.textContent = '';
+    answerReveal.innerHTML = '';
+    answerReveal.className = 'answer-reveal';
+    eyeBtn.className = 'btn-eye';
+    answerVisible = false;
+    return;
+  }
+
+  // 第一次显示：标记错题（只在第一次显示时计分）
+  if (!eyeBtn.classList.contains('revealed')) {
+    wrongCount++;
+    streak = 0;
+    wrongPool[origIdx] = (wrongPool[origIdx] || 0) + 1;
+    updateStats();
+
+    const wCount = Object.values(wrongPool).filter(v => v > 0).length;
+    wrongBadge.classList.remove('hidden');
+    wrongQueueCount.textContent = wCount;
+
+    spellingInput.className = 'spelling-input wrong';
+    inputIcon.className = 'input-icon visible error-icon';
+    inputIcon.textContent = '✗';
+
+    setTimeout(() => {
+      spellingInput.className = 'spelling-input';
+      inputIcon.className = 'input-icon';
+      spellingInput.value = '';
+      spellingInput.disabled = false;
+      spellingInput.focus();
+    }, 600);
+
+    showFeedback('error', '👁️', '已揭晓答案，请跟着拼写一遍加深记忆！该题已加入错题重练队列。');
+  }
+
+  // 展示答案
+  answerBannerText.textContent = correct;
+  answerBanner.className = 'answer-banner show';
+  revealAnswer(correct);
+
+  // 眼睛变为"已查看"状态
+  eyeBtn.className = 'btn-eye revealed';
+  answerVisible = true;
+}
+
+/* ============================================================
+   字母瓦片
+============================================================ */
+function revealAnswer(text) {
+  answerReveal.innerHTML = '';
+  answerReveal.className = 'answer-reveal show';
+  let delay = 0;
+  for (const ch of text) {
+    if (ch === ' ') {
+      const sp = document.createElement('div');
+      sp.className = 'space-tile';
+      answerReveal.appendChild(sp);
+    } else {
+      const tile = document.createElement('div');
+      tile.className = 'letter-tile';
+      tile.textContent = ch;
+      tile.style.animationDelay = delay + 'ms';
+      answerReveal.appendChild(tile);
+      delay += 25;
+    }
+  }
+}
+
+/* ============================================================
+   Feedback / Stats
+============================================================ */
+function showFeedback(type, emoji, text) {
+  feedbackEmojiEl.textContent = emoji;
+  feedbackTextEl.textContent  = text;
+  feedbackEl.className = `feedback ${type} show`;
+}
+
+function updateStats() {
+  document.getElementById('statCorrect').textContent = correctCount;
+  document.getElementById('statWrong').textContent   = wrongCount;
+  document.getElementById('statStreak').textContent  = streak;
+}
+
+/* ============================================================
+   完成 + 自动打卡
+============================================================ */
+function showCompletion() {
+  progressFill.style.width = '100%';
+  gameCard.className = 'game-card hide';
+  completionScreen.className = 'completion-screen show';
+
+  const accuracy = Math.round((correctCount / (correctCount + wrongCount)) * 100) || 0;
+  document.getElementById('finalTotal').textContent   = sessionQueue.length;
+  document.getElementById('finalCorrect').textContent = correctCount;
+  document.getElementById('completionSub').textContent =
+    `准确率 ${accuracy}%，最长连对 ${maxStreak} 题。${accuracy >= 90 ? ' 优秀！🌟' : accuracy >= 70 ? ' 良好，继续加油！' : ' 再接再厉！💪'}`;
+
+  // 自动打卡
+  const checkinData = performCheckin();
+  document.getElementById('checkinCompleteTitle').textContent = `🎉 今日打卡成功！连续 ${checkinData.streak} 天`;
+  document.getElementById('checkinCompleteSub').textContent   =
+    checkinData.streak >= 7 ? `坚持一周！你真的很棒 🌟` :
+    checkinData.streak >= 3 ? `连续打卡 ${checkinData.streak} 天，保持势头！` :
+    `明天继续加油，养成好习惯！`;
+
+  spawnConfetti(80);
+  renderCheckin();
+}
+
+/* ============================================================
+   重新开始
+============================================================ */
+function restartGame() {
+  correctCount = wrongCount = streak = maxStreak = sessionPos = 0;
+  updateStats();
+  sessionQueue = buildSessionQueue();
+  gameCard.className = 'game-card';
+  completionScreen.className = 'completion-screen';
+  loadQuestion();
+}
+
+/* ============================================================
+   Confetti
+============================================================ */
+function spawnConfetti(count) {
+  const colors = ['#7c3aed','#06b6d4','#10b981','#f59e0b','#ec4899','#f1f5f9'];
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `left:${Math.random()*100}vw;top:-10px;background:${colors[Math.floor(Math.random()*colors.length)]};width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${2+Math.random()*2}s;animation-delay:${Math.random()*.8}s;`;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+/* Enter key disabled */
+
+/* ============================================================
+   Particle Background
+============================================================ */
+(function initParticles() {
+  const canvas = document.getElementById('bgCanvas');
+  const ctx    = canvas.getContext('2d');
+  let W, H, particles = [];
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize);
+  resize();
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random()*W; this.y = Math.random()*H;
+      this.r = 0.5+Math.random()*1.5;
+      this.vx = (Math.random()-.5)*.3; this.vy = (Math.random()-.5)*.3;
+      this.alpha = 0.1+Math.random()*.4;
+      const hues=[260,200,280,320];
+      this.hue = hues[Math.floor(Math.random()*hues.length)];
+    }
+    update() {
+      this.x+=this.vx; this.y+=this.vy;
+      if(this.x<0||this.x>W||this.y<0||this.y>H) this.reset();
+    }
+    draw() {
+      ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${this.hue},80%,70%,${this.alpha})`; ctx.fill();
+    }
+  }
+  for(let i=0;i<120;i++) particles.push(new Particle());
+  function drawLines(){
+    for(let i=0;i<particles.length;i++) for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<100){
+        ctx.beginPath(); ctx.moveTo(particles[i].x,particles[i].y); ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.strokeStyle=`rgba(124,58,237,${.06*(1-dist/100)})`; ctx.lineWidth=.5; ctx.stroke();
+      }
+    }
+  }
+  function animate(){
+    ctx.clearRect(0,0,W,H); drawLines();
+    particles.forEach(p=>{p.update();p.draw();}); requestAnimationFrame(animate);
+  }
+  animate();
+})();
+
+/* ============================================================
+   Boot
+============================================================ */
+renderCheckin();
+sessionQueue = buildSessionQueue();
+loadQuestion();
+</script>
+
+</body>
+</html>
